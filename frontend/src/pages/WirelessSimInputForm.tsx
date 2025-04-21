@@ -27,8 +27,23 @@ const WirelessSimInputForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+  
     console.log("Submitted Data:", formData);
-    // Send to backend or MATLAB integration here
+  
+    fetch("http://localhost:5000/api/simulation", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",  
+      },
+      body: JSON.stringify(formData),  
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("SNR Values:", data);  
+      })
+      .catch((error) => {
+        console.error("Error submitting form:", error);
+      });
   };
 
   return (
