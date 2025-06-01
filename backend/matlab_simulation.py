@@ -1,26 +1,26 @@
+# matlab_simulation.py
+
 import matlab.engine
 
 eng = matlab.engine.start_matlab()
 
-def run_wifi_simulation(f_GHz, txPower_dBm):
+def run_wifi_simulation(env: dict):
     """
-    Runs the MATLAB wifi_signal_simulation function.
+    Runs the MATLAB wifi_signal_simulation function using provided environment data.
 
     Parameters:
-    - f_GHz (float): Frequency in GHz
-    - txPower_dBm (float): Transmission power in dBm
+    - env (dict): Python dict to be passed as MATLAB struct.
 
     Returns:
-    - List of first 5 SNR values (float)
+    - list: First SNR values (float).
     """
     try:
-        result = eng.wifi_signal_simulation(float(f_GHz), float(txPower_dBm), nargout=3)
+        env_struct = eng.struct(env)
+        result = eng.wifi_signal_simulation(env_struct, nargout=3)
 
-        distance = [val[0] for val in result[0]]  # Flatten the first output (distance)
-        rx_power = [val[0] for val in result[1]]  # Flatten the second output (rxPower_dBm)
-        snr = [val[0] for val in result[2]]       # Flatten the third output (SNR_dB)
-        return snr[:5]
-    
+        snr = [val[0] for val in result[2]]
+        return snr
+
     except Exception as e:
         print("MATLAB simulation error:", str(e))
         return []
