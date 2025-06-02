@@ -2,6 +2,7 @@ import { Box, CircularProgress, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import SNRChartCard from "../components/SNRChartCard";
 import { useEffect, useState } from "react";
+import EnvironmentSidebar from "../components/EnvironmentSidebar";
 
 const WirelessSimDashboard = () => {
   const location = useLocation();
@@ -33,34 +34,37 @@ const WirelessSimDashboard = () => {
   if (!formData) return null;
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        backgroundColor: "background.default",
-        px: 2,
-        py: 4,
-      }}
-    >
-      <Box sx={{ width: { xs: "100%", md: "50%" }, mb: 4 }}>
-        {loading ? (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", height: 400, justifyContent: "center" }}>
-            <CircularProgress />
-            <Typography sx={{ mt: 2 }}>Running simulation...</Typography>
-          </Box>
-        ) : (
-          <SNRChartCard
-            snr={result?.snr}
-            distance={result?.distance}
-            error={result?.error}
-          />
-        )}
+    <>
+      <EnvironmentSidebar formData={formData} />
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "background.default",
+          px: 2,
+          py: 4,
+        }}
+      >
+        <Box sx={{ width: { xs: "100%", md: "50%" }, mb: 4 }}>
+          {loading ? (
+            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", height: 400, justifyContent: "center" }}>
+              <CircularProgress />
+              <Typography sx={{ mt: 2 }}>Running simulation...</Typography>
+            </Box>
+          ) : (
+            <SNRChartCard
+              snr={result?.snr}
+              distance={result?.distance}
+              error={result?.error}
+            />
+          )}
+        </Box>
+        {/* Add more cards/components here for additional results */}
       </Box>
-      {/* Add more cards/components here for additional results */}
-    </Box>
+    </>
   );
 };
 

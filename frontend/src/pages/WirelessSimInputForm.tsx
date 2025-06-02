@@ -91,6 +91,7 @@ const WirelessSimInputForm = () => {
               margin="normal"
               required
               type="number"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
               label="Frequency (GHz)"
@@ -101,6 +102,7 @@ const WirelessSimInputForm = () => {
               margin="normal"
               required
               type="number"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
               label="Transmission Power (dBm)"
@@ -111,6 +113,7 @@ const WirelessSimInputForm = () => {
               margin="normal"
               required
               type="number"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
               label="Number of Access Points"
@@ -121,6 +124,7 @@ const WirelessSimInputForm = () => {
               margin="normal"
               required
               type="number"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
               label="Max Distance (m)"
@@ -131,6 +135,7 @@ const WirelessSimInputForm = () => {
               margin="normal"
               required
               type="number"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
               select
@@ -159,3 +164,4 @@ const WirelessSimInputForm = () => {
 };
 
 export default WirelessSimInputForm;
+
