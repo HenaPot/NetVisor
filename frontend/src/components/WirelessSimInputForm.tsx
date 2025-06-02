@@ -8,22 +8,13 @@ import {
   Box,
   MenuItem,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { ENVIRONMENTS } from "../data/environments";
 
-const ENVIRONMENTS = [
-  { label: "Free space (ideal, unobstructed LOS)", n: 1.0 },
-  { label: "Indoor (line-of-sight, corridors, open office)", n: 1.7 },
-  { label: "Urban outdoor LOS", n: 2.0 },
-  { label: "Indoor (non-line-of-sight, obstructed office)", n: 3.1 },
-  { label: "Urban outdoor (non-line-of-sight)", n: 4.0 },
-  { label: "Dense urban / urban canyon", n: 5.0 },
-  { label: "Inside buildings with heavy obstructions", n: 6.0 },
-  { label: "Suburban outdoor", n: 3.0 },
-  { label: "Forested / foliage-dense environments", n: 5.0 },
-  { label: "Underground, tunnels, heavy industrial areas", n: 7.0 },
-];
+interface WirelessSimInputFormProps {
+  onSubmit: (formData: Record<string, any>) => void;
+}
 
-const WirelessSimInputForm = () => {
+const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     numberOfNodes: "",
     frequency: "",
@@ -31,10 +22,8 @@ const WirelessSimInputForm = () => {
     numberOfAccessPoints: "",
     distance: "",
     environmentType: "",
-    pathLossExponent: 3.0, // default
+    pathLossExponent: 3.0,
   });
-
-  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -54,8 +43,7 @@ const WirelessSimInputForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Pass formData to dashboard via navigation state
-    navigate("/dashboard", { state: { formData } });
+    onSubmit(formData);
   };
 
   return (
@@ -66,19 +54,20 @@ const WirelessSimInputForm = () => {
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "background.default",
+        py: 4,
       }}
     >
       <Card
         sx={{
           width: "100%",
-          maxWidth: 500,
-          mx: 2,
+          maxWidth: 400,
+          mx: 1,
           boxShadow: 3,
-          p: 2,
+          p: 1,
         }}
       >
         <CardContent>
-          <Typography variant="h5" align="center" gutterBottom>
+          <Typography variant="h6" align="center" gutterBottom>
             Wireless Simulation Input
           </Typography>
           <form onSubmit={handleSubmit}>
@@ -88,9 +77,10 @@ const WirelessSimInputForm = () => {
               value={formData.numberOfNodes}
               onChange={handleChange}
               fullWidth
-              margin="normal"
+              margin="dense"
               required
               type="number"
+              size="small"
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
@@ -99,9 +89,10 @@ const WirelessSimInputForm = () => {
               value={formData.frequency}
               onChange={handleChange}
               fullWidth
-              margin="normal"
+              margin="dense"
               required
               type="number"
+              size="small"
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
@@ -110,9 +101,10 @@ const WirelessSimInputForm = () => {
               value={formData.transmissionPower}
               onChange={handleChange}
               fullWidth
-              margin="normal"
+              margin="dense"
               required
               type="number"
+              size="small"
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
@@ -121,9 +113,10 @@ const WirelessSimInputForm = () => {
               value={formData.numberOfAccessPoints}
               onChange={handleChange}
               fullWidth
-              margin="normal"
+              margin="dense"
               required
               type="number"
+              size="small"
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
@@ -132,9 +125,10 @@ const WirelessSimInputForm = () => {
               value={formData.distance}
               onChange={handleChange}
               fullWidth
-              margin="normal"
+              margin="dense"
               required
               type="number"
+              size="small"
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
@@ -144,8 +138,9 @@ const WirelessSimInputForm = () => {
               value={formData.environmentType}
               onChange={handleEnvironmentChange}
               fullWidth
-              margin="normal"
+              margin="dense"
               required
+              size="small"
             >
               {ENVIRONMENTS.map((env) => (
                 <MenuItem key={env.label} value={env.label}>
@@ -153,7 +148,14 @@ const WirelessSimInputForm = () => {
                 </MenuItem>
               ))}
             </TextField>
-            <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              fullWidth
+              sx={{ mt: 2 }}
+              size="small"
+            >
               Simulate
             </Button>
           </form>
@@ -164,4 +166,3 @@ const WirelessSimInputForm = () => {
 };
 
 export default WirelessSimInputForm;
-

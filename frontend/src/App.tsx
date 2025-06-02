@@ -1,7 +1,7 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import CssBaseline from '@mui/material/CssBaseline';
-import WirelessSimInputForm from "./pages/WirelessSimInputForm";
+import WirelessSimInputPage from "./pages/WirelessSimInputPage";
 import WirelessSimDashboard from "./pages/WirelessSimDashboard";
 
 
@@ -17,7 +17,7 @@ export default function App() {
       <ThemeProvider theme={darkTheme}>
         <CssBaseline />
         <Routes>
-          <Route path="/" element={<WirelessSimInputForm />} />
+          <Route path="/" element={<WirelessSimInputPage />} />
           <Route path="/dashboard" element={<WirelessSimDashboard />} />
         </Routes>
       </ThemeProvider>
