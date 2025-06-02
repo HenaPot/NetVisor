@@ -7,6 +7,7 @@ import {
   Typography,
   Box,
 } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const WirelessSimInputForm = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,8 @@ const WirelessSimInputForm = () => {
     numberOfAccessPoints: "",
     distance: "",
   });
+
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -33,13 +36,14 @@ const WirelessSimInputForm = () => {
     fetch("http://localhost:5000/api/simulation", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",  
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(formData),  
+      body: JSON.stringify(formData),
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log("SNR Values:", data);  
+        // Assuming backend returns { snr: [...], distance: [...] }
+        navigate("/dashboard", { state: { snr: data.snr, distance: data.distance } });
       })
       .catch((error) => {
         console.error("Error submitting form:", error);

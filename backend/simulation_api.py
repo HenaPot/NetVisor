@@ -12,8 +12,8 @@ CORS(app)
 def handle_simulation():
     data = request.get_json()
     env = build_environment(data) 
-    snr_values = run_wifi_simulation(env)
-    return jsonify(snr_values)
+    result = run_wifi_simulation(env)
+    return jsonify(result)
 
 if __name__ == "__main__":
     app.run(debug=True)

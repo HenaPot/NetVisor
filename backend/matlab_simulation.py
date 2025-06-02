@@ -16,11 +16,12 @@ def run_wifi_simulation(env: dict):
     """
     try:
         env_struct = eng.struct(env)
-        result = eng.wifi_signal_simulation(env_struct, nargout=3)
+        result = eng.wifi_signal_simulation(env_struct, nargout=2)
 
-        snr = [val[0] for val in result[2]]
-        return snr
+        snr = [val[0] for val in result[1]]
+        distance = [val[0] for val in result[0]]
+        return {"snr": snr, "distance": distance}
 
     except Exception as e:
         print("MATLAB simulation error:", str(e))
-        return []
+        return {"error": str(e)}

@@ -1,6 +1,8 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import CssBaseline from '@mui/material/CssBaseline';
 import WirelessSimInputForm from "./pages/WirelessSimInputForm";
+import WirelessSimDashboard from "./pages/WirelessSimDashboard";
 
 
 const darkTheme = createTheme({
@@ -11,10 +13,15 @@ const darkTheme = createTheme({
 
 export default function App() {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <WirelessSimInputForm />
-    </ThemeProvider>
+    <Router>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Routes>
+          <Route path="/" element={<WirelessSimInputForm />} />
+          <Route path="/dashboard" element={<WirelessSimDashboard />} />
+        </Routes>
+      </ThemeProvider>
+    </Router>
   );
 }
 
