@@ -22,5 +22,7 @@ def build_environment(data: dict):
         'distances': eng.transpose(eng.colon(1.0, float(data.get('distance', 100)))), 
         'numberOfNodes': float(data.get('numberOfNodes', 10)),
         'dataSize': float(data.get('dataSize', 1000)),
-        'numberOfAPs': float(data.get('numberOfAccessPoints', 1))
+        'numberOfAPs': float(data.get('numberOfAccessPoints', 1)),
+        'refetenceDistance_m': float(1.0),
+        'pathLossExponent': float(data.get('pathLossExponent', 3.0)),
     }

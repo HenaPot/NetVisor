@@ -1,23 +1,16 @@
-import { Card, CardContent, Typography, Box } from "@mui/material";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Box } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
+import SNRChartCard from "../components/SNRChartCard";
 
 const WirelessSimDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { snr, distance } = location.state || {};
+  const { snr, distance, error } = location.state || {};
 
-  if (!snr || !distance) {
-    // If no data, redirect back to form
+  if (!snr && !distance && !error) {
     navigate("/");
     return null;
   }
-
-  // Prepare data for chart
-  const chartData = distance.map((d: number, i: number) => ({
-    distance: d,
-    snr: snr[i],
-  }));
 
   return (
     <Box
@@ -26,24 +19,13 @@ const WirelessSimDashboard = () => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
+        backgroundColor: "background.default",
+        px: 2,
       }}
     >
-      <Card sx={{ width: "100%", maxWidth: 700 }}>
-        <CardContent>
-          <Typography variant="h5" align="center" gutterBottom>
-            SNR over Distance
-          </Typography>
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="distance" label={{ value: "Distance", position: "insideBottomRight", offset: 0 }} />
-              <YAxis label={{ value: "SNR (dB)", angle: -90, position: "insideLeft" }} />
-              <Tooltip />
-              <Line type="monotone" dataKey="snr" stroke="#1976d2" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <Box sx={{ width: { xs: "100%", md: "50%" } }}>
+        <SNRChartCard snr={snr} distance={distance} error={error} />
+      </Box>
     </Box>
   );
 };
