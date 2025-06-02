@@ -54,25 +54,8 @@ const WirelessSimInputForm = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    fetch("http://localhost:5000/api/simulation", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.error) {
-          navigate("/dashboard", { state: { error: data.error } });
-        } else {
-          navigate("/dashboard", { state: { snr: data.snr, distance: data.distance } });
-        }
-      })
-      .catch((error) => {
-        console.error("Error submitting form:", error);
-      });
+    // Pass formData to dashboard via navigation state
+    navigate("/dashboard", { state: { formData } });
   };
 
   return (

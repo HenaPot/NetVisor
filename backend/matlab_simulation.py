@@ -12,7 +12,7 @@ def run_wifi_simulation(env: dict):
     - env (dict): Python dict to be passed as MATLAB struct.
 
     Returns:
-    - list: First SNR values (float).
+    - dictionary: {"snr": [<snr_values>], "distance": [<distance_values>]}.
     """
     try:
         env_struct = eng.struct(env)

@@ -25,4 +25,5 @@ def build_environment(data: dict):
         'numberOfAPs': float(data.get('numberOfAccessPoints', 1)),
         'refetenceDistance_m': float(1.0),
         'pathLossExponent': float(data.get('pathLossExponent', 3.0)),
+        'ricianKFactor_dB': float(6.0),
     }
