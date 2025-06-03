@@ -9,7 +9,7 @@ const WirelessSimDashboard = () => {
   const navigate = useNavigate();
   const { formData } = location.state || {};
 
-  const [result, setResult] = useState<{ snr?: number[]; distance?: number[]; error?: string } | null>(null);
+  const [result, setResult] = useState<{ snr?: number[][]; distance?: number[][]; time?: number[]; error?: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -41,28 +41,23 @@ const WirelessSimDashboard = () => {
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "flex-start",
-          alignItems: "center",
+          justifyContent: "center", // vertical centering
+          alignItems: "center",     // horizontal centering
           backgroundColor: "background.default",
           px: 2,
           py: 4,
         }}
       >
-        <Box sx={{ width: { xs: "100%", md: "50%" }, mb: 4 }}>
+        <Box sx={{ width: "100%", maxWidth: 1400, mx: "auto" }}>
           {loading ? (
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", height: 400, justifyContent: "center" }}>
               <CircularProgress />
               <Typography sx={{ mt: 2 }}>Running simulation...</Typography>
             </Box>
           ) : (
-            <SNRChartCard
-              snr={result?.snr}
-              distance={result?.distance}
-              error={result?.error}
-            />
+          <SNRChartCard snr={result?.snr} distance={result?.distance} time={result?.time} error={result?.error} />
           )}
         </Box>
-        {/* Add more cards/components here for additional results */}
       </Box>
     </>
   );

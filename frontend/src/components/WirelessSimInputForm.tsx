@@ -16,19 +16,26 @@ interface WirelessSimInputFormProps {
 
 const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
-    numberOfNodes: "",
-    frequency: "",
-    transmissionPower: "",
-    numberOfAccessPoints: "",
-    distance: "",
-    environmentType: "",
+    frequency: 2.4,
+    transmissionPower: 20,
+    bandwidth: 20000000,
+    noiseFigure: 10,
+    numberOfNodes: 10,
+    numberOfAccessPoints: 1,
+    dataSize: 1000,
     pathLossExponent: 3.0,
+    ricianKFactor_dB: 6.0,
+    simulationTime: 100.0,
+    timeStep: 1.0,
+    velocity: 1.5,
+    environmentType: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: type === "number" ? Number(value) : value,
     });
   };
 
@@ -43,7 +50,9 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Remove environmentType before sending, if not needed by backend
+    const { environmentType, ...payload } = formData;
+    onSubmit(payload);
   };
 
   return (
@@ -72,18 +81,6 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
           </Typography>
           <form onSubmit={handleSubmit}>
             <TextField
-              label="Number of Nodes"
-              name="numberOfNodes"
-              value={formData.numberOfNodes}
-              onChange={handleChange}
-              fullWidth
-              margin="dense"
-              required
-              type="number"
-              size="small"
-              onWheel={e => (e.target as HTMLInputElement).blur()}
-            />
-            <TextField
               label="Frequency (GHz)"
               name="frequency"
               value={formData.frequency}
@@ -108,6 +105,42 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
+              label="Bandwidth (Hz)"
+              name="bandwidth"
+              value={formData.bandwidth}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
+            <TextField
+              label="Noise Figure (dB)"
+              name="noiseFigure"
+              value={formData.noiseFigure}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
+            <TextField
+              label="Number of Nodes"
+              name="numberOfNodes"
+              value={formData.numberOfNodes}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
+            <TextField
               label="Number of Access Points"
               name="numberOfAccessPoints"
               value={formData.numberOfAccessPoints}
@@ -120,9 +153,9 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
               onWheel={e => (e.target as HTMLInputElement).blur()}
             />
             <TextField
-              label="Max Distance (m)"
-              name="distance"
-              value={formData.distance}
+              label="Data Size"
+              name="dataSize"
+              value={formData.dataSize}
               onChange={handleChange}
               fullWidth
               margin="dense"
@@ -148,6 +181,54 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 </MenuItem>
               ))}
             </TextField>
+            <TextField
+              label="Rician K Factor (dB)"
+              name="ricianKFactor_dB"
+              value={formData.ricianKFactor_dB}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
+            <TextField
+              label="Simulation Time (s)"
+              name="simulationTime"
+              value={formData.simulationTime}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
+            <TextField
+              label="Time Step (s)"
+              name="timeStep"
+              value={formData.timeStep}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
+            <TextField
+              label="Velocity (m/s)"
+              name="velocity"
+              value={formData.velocity}
+              onChange={handleChange}
+              fullWidth
+              margin="dense"
+              required
+              type="number"
+              size="small"
+              onWheel={e => (e.target as HTMLInputElement).blur()}
+            />
             <Button
               type="submit"
               variant="contained"
