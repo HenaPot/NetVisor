@@ -1,4 +1,4 @@
-function result = simulate_multi_user_wifi(aps, user_positions, path_loss_exp, rician_K_dB, hysteresis_dB)
+function result_struct = simulate_multi_user_wifi(aps, user_positions, path_loss_exp, rician_K_dB, hysteresis_dB)
     if nargin < 5
         hysteresis_dB = 3;
     end
@@ -10,7 +10,6 @@ function result = simulate_multi_user_wifi(aps, user_positions, path_loss_exp, r
     aps_array = repmat(struct('tx_power_dBm', [], 'frequency_Hz', [], 'bandwidth_Hz', [], 'distances', [], 'position', []), 1, n_aps);
     for k = 1:n_aps
         aps_array(k).tx_power_dBm = aps.tx_power_dBm(k);
-        % unwrap cell if necessary
         if iscell(aps.position{k})
             aps_array(k).position = aps.position{k}{1};
         else
@@ -24,15 +23,17 @@ function result = simulate_multi_user_wifi(aps, user_positions, path_loss_exp, r
     % Compute distance matrix
     dist_matrix = calculate_user_ap_distances(aps, user_positions); % [n_aps x n_users x n_steps]
 
-    % --- Run simulation per user ---
-    users = struct([]);
+    % --- Prepare containers for all users ---
+    sinr_all = cell(1, n_users);
+    handover_all = cell(1, n_users);
+    throughput_all = cell(1, n_users);
+    distance_all = cell(1, n_users);
+
     for u = 1:n_users
         user_dist_matrix = squeeze(dist_matrix(:, u, :));  % [n_aps x n_steps]
 
-        % Compute handover decisions
         handover = handover_decision_with_interference(user_dist_matrix, aps, path_loss_exp, rician_K_dB, hysteresis_dB);
 
-        % Compute throughput and SINR
         throughput_matrix = zeros(n_aps, n_steps);
         sinr_matrix = zeros(n_aps, n_steps);
 
@@ -40,7 +41,6 @@ function result = simulate_multi_user_wifi(aps, user_positions, path_loss_exp, r
             serving_ap = aps(ap_idx);
             serving_ap.distances = user_dist_matrix(ap_idx, :);
 
-            % Build interfering APs
             intf_aps = struct('tx_power_dBm', {}, 'frequency_Hz', {}, 'bandwidth_Hz', {}, 'distances', {});
             for j = 1:n_aps
                 if j ~= ap_idx
@@ -60,14 +60,18 @@ function result = simulate_multi_user_wifi(aps, user_positions, path_loss_exp, r
         throughput_final = throughput_matrix(sub2ind(size(throughput_matrix), handover, 1:n_steps));
         sinr_final = sinr_matrix(sub2ind(size(sinr_matrix), handover, 1:n_steps));
 
-        % Package results
-        users(u).sinr_matrix = sinr_matrix;
-        users(u).handover = handover;
-        users(u).throughput = throughput_final;
-        users(u).distance_matrix = squeeze(dist_matrix(:, u, :));
-        users(u).user_id = u;
+        % Save as cell arrays
+        sinr_all{u} = sinr_matrix;
+        handover_all{u} = handover;
+        throughput_all{u} = throughput_final;
+        distance_all{u} = squeeze(dist_matrix(:, u, :));
     end
 
-    result.users = users;
-    result.time = 1:n_steps;
+    % --- Return a scalar struct with cell arrays (Python compatible) ---
+    result_struct = struct();
+    result_struct.users_sinr = sinr_all;
+    result_struct.users_handover = handover_all;
+    result_struct.users_throughput = throughput_all;
+    result_struct.users_distance = distance_all;
+    result_struct.time = 1:n_steps;
 end
