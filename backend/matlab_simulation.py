@@ -1,5 +1,3 @@
-# matlab_simulation.py
-
 import matlab.engine
 import numpy as np
 import scipy.io
@@ -8,23 +6,39 @@ from mobility import generate_linear_mobility
 eng = matlab.engine.start_matlab()
 eng.addpath(r'C:\Faks 5\SDP\NetVisor\backend\matlab_scripts', nargout=0)
 
+def to_python(obj):
+    """Recursively convert MATLAB/NumPy types to Python lists/floats/ints."""
+    import matlab
+    import numpy as np
+    if isinstance(obj, matlab.double):
+        return [to_python(x) for x in obj]
+    elif isinstance(obj, (list, tuple)):
+        return [to_python(x) for x in obj]
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif hasattr(obj, '__float__'):
+        return float(obj)
+    elif hasattr(obj, '__int__'):
+        return int(obj)
+    elif isinstance(obj, dict):
+        return {k: to_python(v) for k, v in obj.items()}
+    else:
+        return obj
+
 def run_multiuser_wifi_simulation(env):
     n_aps = env["numberOfAccessPoints"]
     n_users = env["numberOfNodes"]
     n_steps = int(env["simulationTime"] / env["timeStep"])
+    ap_positions = env["apPositions"]
 
-    # Example AP positions
-    ap_positions = [[0, 0], [40, 0], [20, 20]]
-
-    # Build AP struct for MATLAB
     aps_matlab = {
-        "tx_power_dBm": [float(env["transmissionPower"])] * 3,
+        "tx_power_dBm": env["transmissionPowers"],
         "position": [matlab.double([[float(pos[0]), float(pos[1])]]) for pos in ap_positions],
-        "frequency_Hz": [2.4e9, 2.42e9, 2.4e9],
-        "bandwidth_Hz": [20e6] * 3
+        "frequency_Hz": env["frequencies"],
+        "bandwidth_Hz": env["bandwidths"]
     }
 
-    # Generate user positions
+    # Generate user positions (movement logic untouched)
     user_positions = np.zeros((n_users, 2, n_steps))
     radii = [10, 8, 6]
     angular_speeds = [2*np.pi/30, 2*np.pi/25, 2*np.pi/20]
@@ -42,25 +56,8 @@ def run_multiuser_wifi_simulation(env):
         positions_matlab,
         float(env["pathLossExponent"]),
         float(env["ricianKFactor_dB"]),
-        3,
+        n_aps,
         nargout=1
     )
 
-    # --- Convert MATLAB result to Python-native types ---
-    py_result = {
-        "time": list(result["time"]),
-        "users_sinr": [
-            [list(row) for row in result["users_sinr"][u]] for u in range(n_users)
-        ],
-        "users_handover": [
-            list(result["users_handover"][u]) for u in range(n_users)
-        ],
-        "users_throughput": [
-            list(result["users_throughput"][u]) for u in range(n_users)
-        ],
-        "users_distance": [
-            [list(row) for row in result["users_distance"][u]] for u in range(n_users)
-        ]
-    }
-
-    return py_result
+    return to_python(result)
