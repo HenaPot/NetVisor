@@ -1,7 +1,6 @@
 import matlab.engine
 import numpy as np
-import scipy.io
-from mobility import generate_linear_mobility
+from mobility import generate_realistic_user_positions
 
 eng = matlab.engine.start_matlab()
 eng.addpath(r'C:\Faks 5\SDP\NetVisor\backend\matlab_scripts', nargout=0)
@@ -28,8 +27,10 @@ def to_python(obj):
 def run_multiuser_wifi_simulation(env):
     n_aps = env["numberOfAccessPoints"]
     n_users = env["numberOfNodes"]
-    n_steps = int(env["simulationTime"] / env["timeStep"])
+    time_step = env["timeStep"]
+    n_steps = int(env["simulationTime"] / time_step)
     ap_positions = env["apPositions"]
+    velocity = env["velocity"]
 
     aps_matlab = {
         "tx_power_dBm": env["transmissionPowers"],
@@ -38,19 +39,15 @@ def run_multiuser_wifi_simulation(env):
         "bandwidth_Hz": env["bandwidths"]
     }
 
-    # Generate user positions (movement logic untouched)
-    user_positions = np.zeros((n_users, 2, n_steps))
-    radii = [10, 8, 6]
-    angular_speeds = [2*np.pi/30, 2*np.pi/25, 2*np.pi/20]
-    centers = np.array(ap_positions)
-    for u in range(n_users):
-        for t in range(n_steps):
-            angle = angular_speeds[u] * t
-            user_positions[u, 0, t] = centers[u, 0] + radii[u] * np.cos(angle)
-            user_positions[u, 1, t] = centers[u, 1] + radii[u] * np.sin(angle)
+    user_positions = generate_realistic_user_positions(
+        n_users=n_users,
+        n_steps=n_steps,
+        ap_positions=ap_positions,
+        velocity=velocity,
+        time_step=time_step
+    )
     positions_matlab = matlab.double(user_positions.tolist())
 
-    # Call MATLAB
     result = eng.simulate_multi_user_wifi(
         aps_matlab,
         positions_matlab,
