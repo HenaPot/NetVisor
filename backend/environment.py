@@ -21,7 +21,11 @@ def build_environment(data: dict):
     K_decay = float(data.get("K_decay", 0.1))
     shadow_sigma_dB = float(data.get("shadow_sigma_dB", 3.0))
     max_retries = int(data.get("maxRetries", 3))
+    antenna_gains = data.get("antennaGains", [0] * num_aps)
+    beamwidths = data.get("beamwidths", [360] * num_aps)
 
+    beamwidths = [float(b) for b in beamwidths]
+    antenna_gains = [float(g) for g in antenna_gains]
     transmission_powers = [float(p) for p in transmission_powers]
     frequencies = [float(f) for f in frequencies]
     bandwidths = [float(b) for b in bandwidths]
@@ -42,5 +46,7 @@ def build_environment(data: dict):
         "K0dB": K0_dB,
         "KDecay": K_decay,
         "shadowSigmaDB": shadow_sigma_dB,
-        "maxRetries": max_retries
+        "maxRetries": max_retries,
+        "antennaGains": antenna_gains,
+        "beamwidths": beamwidths
     }

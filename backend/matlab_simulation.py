@@ -2,6 +2,22 @@ import numpy as np
 from scipy.stats import norm
 from mobility import generate_realistic_user_positions
 
+
+def interference_factor(freq_diff_Hz, channel_bandwidth_Hz):
+    """
+    Returns a linear interference factor between 0 and 1 based on frequency separation.
+    freq_diff_Hz: absolute frequency difference
+    channel_bandwidth_Hz: AP channel bandwidth
+    """
+    if freq_diff_Hz == 0:
+        return 1.0  # fully co-channel
+    elif freq_diff_Hz < channel_bandwidth_Hz:
+        # Adjacent channel interference drops linearly with separation
+        return 1 - freq_diff_Hz / channel_bandwidth_Hz
+    else:
+        return 0.0
+
+
 # --- Enhanced fading + path loss ---
 def rician_fading_with_shadowing(distances, K0_dB=5.0, K_decay=0.1, shadow_sigma_dB=3.0):
     """
@@ -75,30 +91,40 @@ ber_map = {
 }
 
 
+# --- Directional antenna gain ---
+def directional_gain(theta_rad, G_max_dBi=0, theta_3dB_deg=360):
+    """
+    Simple 2D azimuthal antenna gain.
+    """
+    theta_deg = np.degrees(theta_rad) % 360
+    # Cosine pattern: 0 deg -> max gain, drops at half-power beamwidth
+    G_dB = G_max_dBi * np.cos(np.pi/2 * theta_deg / theta_3dB_deg)
+    G_dB = np.clip(G_dB, -20, G_max_dBi)  # limit back lobe
+    return 10 ** (G_dB / 10)
+
+
+# --- Angle between AP and user ---
+def angle_to_user(ap_pos, user_pos):
+    dx, dy = user_pos[0] - ap_pos[0], user_pos[1] - ap_pos[1]
+    return np.arctan2(dy, dx)
+
+
 # --- SINR computation ---
 def compute_sinr(distances_all_aps, aps_meta,
-                 path_loss_exp=3.0, K0_dB=5.0, K_decay=0.1, shadow_sigma_dB=3.0):
+                 path_loss_exp=3.0, K0_dB=5.0, K_decay=0.1, shadow_sigma_dB=3.0,
+                 user_positions=None):
     """
-    distances_all_aps : ndarray
-        Shape (n_aps, n_steps) - distance from each AP to the user over time
-    aps_meta : list of dicts
-        AP parameters (tx_power_dBm, frequency_Hz, bandwidth_Hz, position)
-    path_loss_exp : float
-        Path loss exponent
-    K0_dB : float
-        Rician K-factor at reference distance (dB)
-    K_decay : float
-        Exponential decay factor for K vs distance
-    shadow_sigma_dB : float
-        Standard deviation for log-normal shadowing (dB)
+    distances_all_aps: shape (n_aps, n_steps)
+    user_positions: shape (2, n_steps)
     """
     n_aps, n_steps = distances_all_aps.shape
     rx_all = np.zeros((n_aps, n_aps, n_steps))
 
-    # Compute received power from every AP at the user for all APs (interference included)
+    # Compute received power including directional gain
     for i, ap in enumerate(aps_meta):
         for j, intf_ap in enumerate(aps_meta):
-            rx_all[i,j,:] = compute_received_power(
+            # Compute distance-based power
+            rx_lin = compute_received_power(
                 distances_all_aps[j,:],
                 intf_ap,
                 path_loss_exp=path_loss_exp,
@@ -107,15 +133,28 @@ def compute_sinr(distances_all_aps, aps_meta,
                 shadow_sigma_dB=shadow_sigma_dB
             )
 
+            # Directional gain
+            if user_positions is not None:
+                theta = angle_to_user(intf_ap["position"], user_positions[:,0])
+                gain_lin = directional_gain(theta,
+                                            G_max_dBi=intf_ap.get("antenna_gain_dBi",0),
+                                            theta_3dB_deg=intf_ap.get("beamwidth_deg",360))
+                rx_lin *= gain_lin
+
+            rx_all[i,j,:] = rx_lin
+
     sinr_linear = np.zeros((n_aps, n_steps))
     for i, ap in enumerate(aps_meta):
         freq = ap["frequency_Hz"]
         serving_power = rx_all[i,i,:]
 
-        # Only consider APs on same or close frequency as interference
-        intf_mask = np.array([j != i and abs(aps_meta[j]["frequency_Hz"] - freq) < 1e6
-                              for j in range(n_aps)])
-        interference_power = rx_all[i,intf_mask,:].sum(axis=0)
+        interference_power = np.zeros(n_steps)
+        for j, intf_ap in enumerate(aps_meta):
+            if j == i:
+                continue
+            freq_diff = abs(intf_ap["frequency_Hz"] - freq)
+            intf_factor = interference_factor(freq_diff, ap["bandwidth_Hz"])
+            interference_power += rx_all[i,j,:] * intf_factor
 
         # Noise power in linear scale (dBm -> linear)
         noise_power_dBm = -174 + 10*np.log10(ap["bandwidth_Hz"]) + 7
@@ -234,14 +273,24 @@ def compute_throughput_all(
 
 
 # --- Full simulation ---
-def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, K0_dB, K_decay, shadow_sigma_dB, hysteresis_dB=3.0, packet_size_bytes=1500, max_retries=3):
+def simulate_multi_user_wifi_py(
+    aps,
+    user_positions,
+    path_loss_exp,
+    K0_dB,
+    K_decay,
+    shadow_sigma_dB,
+    hysteresis_dB,
+    packet_size_bytes,
+    max_retries
+):
     """
     Simulate multi-user WiFi network with enhanced fading, SINR, handover, and throughput.
 
     Parameters
     ----------
     aps : list of dict
-        AP metadata (tx_power_dBm, frequency_Hz, bandwidth_Hz, position)
+        AP metadata (tx_power_dBm, frequency_Hz, bandwidth_Hz, position, antenna_gain_dBi, beamwidth_deg)
     user_positions : ndarray (n_users, 2, n_steps)
         User positions over time
     path_loss_exp, K0_dB, K_decay, shadow_sigma_dB : float
@@ -274,7 +323,8 @@ def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, K0_dB, K_dec
             path_loss_exp=path_loss_exp,
             K0_dB=K0_dB,
             K_decay=K_decay,
-            shadow_sigma_dB=shadow_sigma_dB
+            shadow_sigma_dB=shadow_sigma_dB,
+            user_positions=user_positions[u, :, :]  # pass this user's trajectory
         )
         sinr_dB = 10*np.log10(sinr_linear + 1e-12)
         handover_all[u, :] = handover_decision(sinr_dB, hysteresis_dB)
@@ -290,7 +340,6 @@ def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, K0_dB, K_dec
     throughput_all, mac_all, per_all = [], [], []
     retries_all, collisions_all, sinr_all, distance_all = [], [], [], []
 
-    # Precompute for all APs/time steps
     for u in range(n_users):
         sinr_linear = 10**(sinr_matrix_all[u,:,:] / 10)
         thr, mac, per, retries, coll = compute_throughput_all(
@@ -325,7 +374,6 @@ def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, K0_dB, K_dec
     }
 
 
-
 # --- APS meta builder ---
 def _build_aps_meta(env):
     n_aps = int(env["numberOfAccessPoints"])
@@ -333,15 +381,20 @@ def _build_aps_meta(env):
     freqs = env["frequencies"]
     bws = env["bandwidths"]
     positions = env["apPositions"]
+    antenna_gains = env.get("antennaGains", [0]*n_aps)        # in dBi
+    beamwidths = env.get("beamwidths", [360]*n_aps)           # in degrees
     aps_meta = []
     for k in range(n_aps):
         aps_meta.append({
             "tx_power_dBm": float(tx_powers[k]),
             "frequency_Hz": float(freqs[k]),
             "bandwidth_Hz": float(bws[k]),
-            "position": [float(positions[k][0]), float(positions[k][1])]
+            "position": [float(positions[k][0]), float(positions[k][1])],
+            "antenna_gain_dBi": float(antenna_gains[k]),
+            "beamwidth_deg": float(beamwidths[k])
         })
     return aps_meta
+
 
 # --- Convert numpy types to JSON-serializable ---
 def _to_serializable(obj):
@@ -369,7 +422,7 @@ def run_multiuser_wifi_simulation(env):
     K_decay = float(env.get("KDecay", 0.1))
     shadow_sigma_dB = float(env.get("shadowSigmaDB", 3.0))
     packet_size_bytes = float(env.get("dataSize", 1500))
-    max_retries = int(env.get("maxRetries", 3))
+    max_retries = int(env.get("maxRetries", 3))         
 
     aps_meta = _build_aps_meta(env)
     
