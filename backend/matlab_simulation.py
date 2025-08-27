@@ -2,14 +2,69 @@ import numpy as np
 from scipy.stats import norm
 from mobility import generate_realistic_user_positions
 
-# --- Fading helper ---
-def rician_fading(distances, K_dB):
+# --- Enhanced fading + path loss ---
+def rician_fading_with_shadowing(distances, K0_dB=5.0, K_decay=0.1, shadow_sigma_dB=3.0):
+    """
+    distances : array_like
+        Distance from APs (meters)
+    K0_dB : float
+        Rician K-factor at reference distance (dB)
+    K_decay : float
+        Exponential decay factor for K vs distance
+    shadow_sigma_dB : float
+        Standard deviation for log-normal shadowing (dB)
+    """
+    # Distance-dependent K-factor
+    K_dB = K0_dB * np.exp(-K_decay * distances)
     K_linear = 10 ** (K_dB / 10)
+
+    # Rician parameters
     s = np.sqrt(K_linear / (K_linear + 1))
     sigma = np.sqrt(1 / (2 * (K_linear + 1)))
+
+    # Small-scale fading (Rician)
     fading_real = s + sigma * np.random.randn(*distances.shape)
     fading_imag = sigma * np.random.randn(*distances.shape)
-    return fading_real**2 + fading_imag**2
+    fading_linear = fading_real**2 + fading_imag**2
+
+    # Log-normal shadowing (in linear scale)
+    shadow_dB = np.random.randn(*distances.shape) * shadow_sigma_dB
+    shadow_linear = 10 ** (shadow_dB / 10)
+
+    return fading_linear * shadow_linear
+
+
+# --- Received power ---
+def compute_received_power(distances, ap, path_loss_exp=3.0,
+                                    K0_dB=5.0, K_decay=0.1, shadow_sigma_dB=3.0):
+    """
+    Compute received power (linear scale) with:
+    - Distance-dependent Rician fading
+    - Log-normal shadowing
+    - Path loss
+    """
+    freq_Hz = ap["frequency_Hz"]
+    tx_power_dBm = ap["tx_power_dBm"]
+    c = 3e8
+    lambda_c = c / freq_Hz
+    d0 = 1.0  # reference distance
+
+    # Free-space path loss at d0
+    pl_d0 = 20 * np.log10(4*np.pi*d0 / lambda_c)
+
+    # Path loss over distance
+    path_loss_dB = pl_d0 + 10 * path_loss_exp * np.log10(distances/d0 + 1e-12)
+
+    # Combined fading + shadowing
+    fading_linear = rician_fading_with_shadowing(distances, K0_dB, K_decay, shadow_sigma_dB)
+    fading_dB = 10 * np.log10(fading_linear + 1e-12)
+
+    # Received power in dBm and convert to linear scale
+    rx_power_dBm = tx_power_dBm - path_loss_dB + fading_dB
+    rx_power_linear = 10 ** (rx_power_dBm / 10)
+
+    return rx_power_linear
+
 
 # --- BER functions ---
 ber_map = {
@@ -19,37 +74,57 @@ ber_map = {
     "64QAM": lambda snr: 7/24 * norm.sf(np.sqrt(6/7*snr)),
 }
 
-# --- Received power ---
-def compute_received_power(distances, ap, path_loss_exp, rician_K_dB):
-    freq_Hz = ap["frequency_Hz"]
-    tx_power_dBm = ap["tx_power_dBm"]
-    c = 3e8
-    lambda_c = c / freq_Hz
-    d0 = 1.0
-    pl_d0 = 20 * np.log10(4*np.pi*d0 / lambda_c)
-    path_loss_dB = pl_d0 + 10 * path_loss_exp * np.log10(distances/d0 + 1e-12)
-    fading_linear = rician_fading(distances, rician_K_dB)
-    fading_dB = 10*np.log10(fading_linear + 1e-12)
-    rx_power_dBm = tx_power_dBm - path_loss_dB + fading_dB
-    return 10 ** (rx_power_dBm / 10)
 
 # --- SINR computation ---
-def compute_sinr(distances_all_aps, aps_meta, path_loss_exp, rician_K_dB):
+def compute_sinr(distances_all_aps, aps_meta,
+                 path_loss_exp=3.0, K0_dB=5.0, K_decay=0.1, shadow_sigma_dB=3.0):
+    """
+    distances_all_aps : ndarray
+        Shape (n_aps, n_steps) - distance from each AP to the user over time
+    aps_meta : list of dicts
+        AP parameters (tx_power_dBm, frequency_Hz, bandwidth_Hz, position)
+    path_loss_exp : float
+        Path loss exponent
+    K0_dB : float
+        Rician K-factor at reference distance (dB)
+    K_decay : float
+        Exponential decay factor for K vs distance
+    shadow_sigma_dB : float
+        Standard deviation for log-normal shadowing (dB)
+    """
     n_aps, n_steps = distances_all_aps.shape
     rx_all = np.zeros((n_aps, n_aps, n_steps))
+
+    # Compute received power from every AP at the user for all APs (interference included)
     for i, ap in enumerate(aps_meta):
         for j, intf_ap in enumerate(aps_meta):
-            rx_all[i,j,:] = compute_received_power(distances_all_aps[j,:], intf_ap, path_loss_exp, rician_K_dB)
+            rx_all[i,j,:] = compute_received_power(
+                distances_all_aps[j,:],
+                intf_ap,
+                path_loss_exp=path_loss_exp,
+                K0_dB=K0_dB,
+                K_decay=K_decay,
+                shadow_sigma_dB=shadow_sigma_dB
+            )
+
     sinr_linear = np.zeros((n_aps, n_steps))
     for i, ap in enumerate(aps_meta):
         freq = ap["frequency_Hz"]
         serving_power = rx_all[i,i,:]
-        intf_mask = np.array([j != i and abs(aps_meta[j]["frequency_Hz"] - freq)<1e6 for j in range(n_aps)])
+
+        # Only consider APs on same or close frequency as interference
+        intf_mask = np.array([j != i and abs(aps_meta[j]["frequency_Hz"] - freq) < 1e6
+                              for j in range(n_aps)])
         interference_power = rx_all[i,intf_mask,:].sum(axis=0)
+
+        # Noise power in linear scale (dBm -> linear)
         noise_power_dBm = -174 + 10*np.log10(ap["bandwidth_Hz"]) + 7
         noise_power = 10 ** (noise_power_dBm / 10)
+
         sinr_linear[i,:] = serving_power / (interference_power + noise_power + 1e-12)
+
     return sinr_linear
+
 
 # --- Handover ---
 def handover_decision(sinr_dB_matrix, hysteresis_dB=3.0):
@@ -64,82 +139,171 @@ def handover_decision(sinr_dB_matrix, hysteresis_dB=3.0):
         connected_ap[t] = current_ap
     return connected_ap + 1
 
-# --- Vectorized throughput computation for all APs and timesteps ---
-def compute_throughput_all(sinr_linear_all, n_users_on_ap):
-    n_aps, n_steps = sinr_linear_all.shape
-    mcs_table = [
-        ("BPSK",  1/2,  6.5),
-        ("QPSK",  1/2, 13),
-        ("QPSK",  3/4, 19.5),
-        ("16QAM", 1/2, 26),
-        ("16QAM", 3/4, 39),
-        ("64QAM", 2/3, 52),
-        ("64QAM", 3/4, 58.5),
-        ("64QAM", 5/6, 65),
-    ]
-    packet_bits = 1500*8
-    max_retries = 3
 
-    snr_dB = 10*np.log10(sinr_linear_all + 1e-12)
-    mcs_idx = np.digitize(snr_dB, bins=[5,10,15,20,25,30,35])
+# --- Full throughput computation ---
+def compute_throughput_all(
+    sinr_linear_all,
+    n_users_on_ap,
+    packet_size_bytes=1500,
+    max_retries=3,
+    mcs_table=None,
+    mcs_thresholds=None
+):
+    """
+    Compute PHY and MAC throughput for all APs and timesteps dynamically.
+
+    Parameters
+    ----------
+    sinr_linear_all : ndarray (n_aps, n_steps)
+        Linear SINR values.
+    n_users_on_ap : ndarray (n_aps,) or (n_aps, n_steps)
+        Number of users connected to each AP.
+    packet_size_bytes : int
+        Packet size in bytes.
+    max_retries : int
+        Maximum number of retransmissions.
+    mcs_table : list of tuples
+        Each tuple: (modulation, coding_rate, phy_rate_Mbps)
+    mcs_thresholds : list or ndarray
+        SINR thresholds (dB) for MCS selection.
+
+    Returns
+    -------
+    throughput_bps, mac_throughput_bps, per, retries, collisions
+    """
+    n_aps, n_steps = sinr_linear_all.shape
+    packet_bits = packet_size_bytes * 8
+
+    # Default MCS table
+    if mcs_table is None:
+        mcs_table = [
+            ("BPSK",  1/2,  6.5),
+            ("QPSK",  1/2, 13),
+            ("QPSK",  3/4, 19.5),
+            ("16QAM", 1/2, 26),
+            ("16QAM", 3/4, 39),
+            ("64QAM", 2/3, 52),
+            ("64QAM", 3/4, 58.5),
+            ("64QAM", 5/6, 65),
+        ]
+
+    # Default MCS thresholds (dB)
+    if mcs_thresholds is None:
+        mcs_thresholds = [5, 10, 15, 20, 25, 30, 35]
+
+    # Convert SINR to dB
+    snr_dB = 10 * np.log10(sinr_linear_all + 1e-12)
+    mcs_idx = np.digitize(snr_dB, bins=mcs_thresholds)
+    mcs_idx = np.clip(mcs_idx, 0, len(mcs_table) - 1)
+
+    # PHY rates and modulation types
     phy_rates = np.array([mcs_table[idx][2]*1e6 for idx in mcs_idx.flatten()]).reshape(n_aps, n_steps)
     mod_types = np.array([mcs_table[idx][0] for idx in mcs_idx.flatten()]).reshape(n_aps, n_steps)
-    
+
+    # Compute BER using ber_map
     ber_vals = np.zeros_like(snr_dB)
-    for mod in ["BPSK","QPSK","16QAM","64QAM"]:
+    for mod, ber_func in ber_map.items():
         mask = (mod_types == mod)
-        ber_vals[mask] = ber_map[mod](sinr_linear_all[mask])
+        if np.any(mask):
+            ber_vals[mask] = ber_func(sinr_linear_all[mask])
+
+    # Packet error rate
     per = 1 - np.exp(-ber_vals * packet_bits)
 
-    # Vectorized retry simulation
+    # Retry simulation (vectorized)
     rand_matrix = np.random.rand(n_aps, n_steps, max_retries)
-    success_mask = rand_matrix > per[:,:,None]
+    success_mask = rand_matrix > per[:, :, None]
     first_success = np.argmax(success_mask, axis=2)
     never_succeed = ~np.any(success_mask, axis=2)
     retries = first_success.astype(float)
     retries[never_succeed] = max_retries
     collisions = never_succeed.astype(float)
+
+    # Throughput
     throughput_bps = np.where(never_succeed, 0, phy_rates)
+
+    # Ensure n_users_on_ap broadcasts correctly
+    n_users_on_ap = np.atleast_2d(n_users_on_ap)
+    if n_users_on_ap.shape[1] == 1 and n_users_on_ap.shape[0] == n_aps:
+        n_users_on_ap = np.repeat(n_users_on_ap, n_steps, axis=1)
+
     mac_efficiency = 1 / np.maximum(1, n_users_on_ap)
     mac_throughput_bps = throughput_bps * mac_efficiency
 
     return throughput_bps, mac_throughput_bps, per, retries, collisions
 
+
 # --- Full simulation ---
-def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, rician_K_dB, hysteresis_dB=3.0):
+def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, K0_dB, K_decay, shadow_sigma_dB, hysteresis_dB=3.0, packet_size_bytes=1500, max_retries=3):
+    """
+    Simulate multi-user WiFi network with enhanced fading, SINR, handover, and throughput.
+
+    Parameters
+    ----------
+    aps : list of dict
+        AP metadata (tx_power_dBm, frequency_Hz, bandwidth_Hz, position)
+    user_positions : ndarray (n_users, 2, n_steps)
+        User positions over time
+    path_loss_exp, K0_dB, K_decay, shadow_sigma_dB : float
+        Radio environment parameters
+    hysteresis_dB : float
+        Handover hysteresis in dB
+    packet_size_bytes : int
+        Packet size for throughput computation
+    max_retries : int
+        Max retransmissions
+    """
     n_users, _, n_steps = user_positions.shape
     n_aps = len(aps)
     ap_positions = np.array([ap["position"] for ap in aps])
     
+    # Compute distances: shape (n_aps, n_users, n_steps)
     diffs = user_positions[None,:,:,:] - ap_positions[:,None,:,None]
     dist_matrix = np.sqrt(np.sum(diffs**2, axis=2))
-    
+
+    # Pre-allocate results
     handover_all = np.zeros((n_users, n_steps), dtype=int)
     sinr_matrix_all = np.zeros((n_users, n_aps, n_steps))
-    
+
     # Compute SINR and handover per user
     for u in range(n_users):
-        distances_user = dist_matrix[:,u,:]
-        sinr_linear = compute_sinr(distances_user, aps, path_loss_exp, rician_K_dB)
+        distances_user = dist_matrix[:, u, :]
+        sinr_linear = compute_sinr(
+            distances_user,
+            aps,
+            path_loss_exp=path_loss_exp,
+            K0_dB=K0_dB,
+            K_decay=K_decay,
+            shadow_sigma_dB=shadow_sigma_dB
+        )
         sinr_dB = 10*np.log10(sinr_linear + 1e-12)
-        handover_all[u,:] = handover_decision(sinr_dB, hysteresis_dB)
-        sinr_matrix_all[u,:,:] = sinr_dB
-    
+        handover_all[u, :] = handover_decision(sinr_dB, hysteresis_dB)
+        sinr_matrix_all[u, :, :] = sinr_dB
+
     # Users per AP per timestep
     n_users_on_ap = np.zeros((n_aps, n_steps), dtype=int)
     for t in range(n_steps):
         bins, counts = np.unique(handover_all[:, t], return_counts=True)
         n_users_on_ap[bins-1, t] = counts
-    
-    # Compute throughput for all users in vectorized form
+
+    # Compute throughput and other metrics for all users
     throughput_all, mac_all, per_all = [], [], []
     retries_all, collisions_all, sinr_all, distance_all = [], [], [], []
-    
+
+    # Precompute for all APs/time steps
     for u in range(n_users):
         sinr_linear = 10**(sinr_matrix_all[u,:,:] / 10)
-        thr, mac, per, retries, coll = compute_throughput_all(sinr_linear, n_users_on_ap)
+        thr, mac, per, retries, coll = compute_throughput_all(
+            sinr_linear,
+            n_users_on_ap,
+            packet_size_bytes=packet_size_bytes,
+            max_retries=max_retries
+        )
+
+        # Map handover AP for this user to extract metrics
         h0 = handover_all[u,:] - 1
         idx_time = np.arange(n_steps)
+
         throughput_all.append(thr[h0, idx_time].tolist())
         mac_all.append(mac[h0, idx_time].tolist())
         per_all.append(per[h0, idx_time].tolist())
@@ -147,7 +311,7 @@ def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, rician_K_dB,
         collisions_all.append(coll[h0, idx_time].tolist())
         sinr_all.append(sinr_matrix_all[u,:,:].tolist())
         distance_all.append(dist_matrix[:,u,:].tolist())
-    
+
     return {
         "users_sinr": sinr_all,
         "users_handover": handover_all.tolist(),
@@ -159,6 +323,7 @@ def simulate_multi_user_wifi_py(aps, user_positions, path_loss_exp, rician_K_dB,
         "users_distance": distance_all,
         "time": list(range(1, n_steps+1))
     }
+
 
 
 # --- APS meta builder ---
@@ -199,9 +364,13 @@ def run_multiuser_wifi_simulation(env):
     ap_positions = env["apPositions"]
     velocity = float(env.get("velocity", 1.5))
     path_loss_exp = float(env.get("pathLossExponent", 3.0))
-    rician_K_dB = float(env.get("ricianKFactor_dB", 5.0))
     hysteresis_dB = float(env.get("hysteresis_dB", 3.0))
-    
+    K0_dB = float(env.get("K0dB", 5.0))
+    K_decay = float(env.get("KDecay", 0.1))
+    shadow_sigma_dB = float(env.get("shadowSigmaDB", 3.0))
+    packet_size_bytes = float(env.get("dataSize", 1500))
+    max_retries = int(env.get("maxRetries", 3))
+
     aps_meta = _build_aps_meta(env)
     
     user_positions = generate_realistic_user_positions(
@@ -216,8 +385,12 @@ def run_multiuser_wifi_simulation(env):
         aps=aps_meta,
         user_positions=user_positions,
         path_loss_exp=path_loss_exp,
-        rician_K_dB=rician_K_dB,
-        hysteresis_dB=hysteresis_dB
+        K0_dB=K0_dB,
+        K_decay=K_decay,
+        shadow_sigma_dB=shadow_sigma_dB,
+        hysteresis_dB=hysteresis_dB,
+        packet_size_bytes=packet_size_bytes,
+        max_retries=max_retries
     )
     
     return _to_serializable(result)
