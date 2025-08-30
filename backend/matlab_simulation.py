@@ -123,7 +123,6 @@ def compute_sinr(distances_all_aps, aps_meta,
     # Compute received power including directional gain
     for i, ap in enumerate(aps_meta):
         for j, intf_ap in enumerate(aps_meta):
-            # Compute distance-based power
             rx_lin = compute_received_power(
                 distances_all_aps[j,:],
                 intf_ap,
@@ -133,26 +132,29 @@ def compute_sinr(distances_all_aps, aps_meta,
                 shadow_sigma_dB=shadow_sigma_dB
             )
 
-            # Directional gain
+            # Apply directional gain per timestep if user positions provided
             if user_positions is not None:
-                theta = angle_to_user(intf_ap["position"], user_positions[:,0])
-                gain_lin = directional_gain(theta,
-                                            G_max_dBi=intf_ap.get("antenna_gain_dBi",0),
-                                            theta_3dB_deg=intf_ap.get("beamwidth_deg",360))
+                gain_lin = np.ones(n_steps)
+                for t in range(n_steps):
+                    theta = angle_to_user(intf_ap["position"], user_positions[:,t])
+                    gain_lin[t] = directional_gain(
+                        theta,
+                        G_max_dBi=intf_ap.get("antenna_gain_dBi",0),
+                        theta_3dB_deg=intf_ap.get("beamwidth_deg",360)
+                    )
                 rx_lin *= gain_lin
 
             rx_all[i,j,:] = rx_lin
 
+    # Compute SINR considering frequency-dependent interference
     sinr_linear = np.zeros((n_aps, n_steps))
     for i, ap in enumerate(aps_meta):
-        freq = ap["frequency_Hz"]
         serving_power = rx_all[i,i,:]
-
         interference_power = np.zeros(n_steps)
         for j, intf_ap in enumerate(aps_meta):
             if j == i:
                 continue
-            freq_diff = abs(intf_ap["frequency_Hz"] - freq)
+            freq_diff = abs(intf_ap["frequency_Hz"] - ap["frequency_Hz"])
             intf_factor = interference_factor(freq_diff, ap["bandwidth_Hz"])
             interference_power += rx_all[i,j,:] * intf_factor
 
@@ -179,37 +181,19 @@ def handover_decision(sinr_dB_matrix, hysteresis_dB=3.0):
     return connected_ap + 1
 
 
-# --- Full throughput computation ---
+# --- Full throughput computation with adaptive MCS per user ---
 def compute_throughput_all(
     sinr_linear_all,
     n_users_on_ap,
     packet_size_bytes=1500,
     max_retries=3,
     mcs_table=None,
-    mcs_thresholds=None
+    mcs_thresholds=None,
 ):
     """
-    Compute PHY and MAC throughput for all APs and timesteps dynamically.
-
-    Parameters
-    ----------
-    sinr_linear_all : ndarray (n_aps, n_steps)
-        Linear SINR values.
-    n_users_on_ap : ndarray (n_aps,) or (n_aps, n_steps)
-        Number of users connected to each AP.
-    packet_size_bytes : int
-        Packet size in bytes.
-    max_retries : int
-        Maximum number of retransmissions.
-    mcs_table : list of tuples
-        Each tuple: (modulation, coding_rate, phy_rate_Mbps)
-    mcs_thresholds : list or ndarray
-        SINR thresholds (dB) for MCS selection.
-
-    Returns
-    -------
-    throughput_bps, mac_throughput_bps, per, retries, collisions
+    Compute PHY and MAC throughput with adaptive MCS per-user and frequency-aware SINR.
     """
+
     n_aps, n_steps = sinr_linear_all.shape
     packet_bits = packet_size_bytes * 8
 
@@ -230,7 +214,12 @@ def compute_throughput_all(
     if mcs_thresholds is None:
         mcs_thresholds = [5, 10, 15, 20, 25, 30, 35]
 
-    # Convert SINR to dB
+    # Ensure n_users_on_ap is broadcast correctly
+    n_users_on_ap = np.atleast_2d(n_users_on_ap)
+    if n_users_on_ap.shape[1] == 1 and n_users_on_ap.shape[0] == n_aps:
+        n_users_on_ap = np.repeat(n_users_on_ap, n_steps, axis=1)
+
+    # Adaptive MCS selection per user
     snr_dB = 10 * np.log10(sinr_linear_all + 1e-12)
     mcs_idx = np.digitize(snr_dB, bins=mcs_thresholds)
     mcs_idx = np.clip(mcs_idx, 0, len(mcs_table) - 1)
@@ -239,17 +228,17 @@ def compute_throughput_all(
     phy_rates = np.array([mcs_table[idx][2]*1e6 for idx in mcs_idx.flatten()]).reshape(n_aps, n_steps)
     mod_types = np.array([mcs_table[idx][0] for idx in mcs_idx.flatten()]).reshape(n_aps, n_steps)
 
-    # Compute BER using ber_map
+    # BER calculation per modulation type
     ber_vals = np.zeros_like(snr_dB)
     for mod, ber_func in ber_map.items():
         mask = (mod_types == mod)
         if np.any(mask):
             ber_vals[mask] = ber_func(sinr_linear_all[mask])
 
-    # Packet error rate
+    # Packet error rate (PER)
     per = 1 - np.exp(-ber_vals * packet_bits)
 
-    # Retry simulation (vectorized)
+    # Retry simulation
     rand_matrix = np.random.rand(n_aps, n_steps, max_retries)
     success_mask = rand_matrix > per[:, :, None]
     first_success = np.argmax(success_mask, axis=2)
@@ -258,14 +247,10 @@ def compute_throughput_all(
     retries[never_succeed] = max_retries
     collisions = never_succeed.astype(float)
 
-    # Throughput
+    # Throughput (PHY layer)
     throughput_bps = np.where(never_succeed, 0, phy_rates)
 
-    # Ensure n_users_on_ap broadcasts correctly
-    n_users_on_ap = np.atleast_2d(n_users_on_ap)
-    if n_users_on_ap.shape[1] == 1 and n_users_on_ap.shape[0] == n_aps:
-        n_users_on_ap = np.repeat(n_users_on_ap, n_steps, axis=1)
-
+    # MAC efficiency
     mac_efficiency = 1 / np.maximum(1, n_users_on_ap)
     mac_throughput_bps = throughput_bps * mac_efficiency
 
@@ -285,22 +270,7 @@ def simulate_multi_user_wifi_py(
     max_retries
 ):
     """
-    Simulate multi-user WiFi network with enhanced fading, SINR, handover, and throughput.
-
-    Parameters
-    ----------
-    aps : list of dict
-        AP metadata (tx_power_dBm, frequency_Hz, bandwidth_Hz, position, antenna_gain_dBi, beamwidth_deg)
-    user_positions : ndarray (n_users, 2, n_steps)
-        User positions over time
-    path_loss_exp, K0_dB, K_decay, shadow_sigma_dB : float
-        Radio environment parameters
-    hysteresis_dB : float
-        Handover hysteresis in dB
-    packet_size_bytes : int
-        Packet size for throughput computation
-    max_retries : int
-        Max retransmissions
+    Simulate multi-user WiFi network with per-user, per-AP adaptive MCS.
     """
     n_users, _, n_steps = user_positions.shape
     n_aps = len(aps)
@@ -324,7 +294,7 @@ def simulate_multi_user_wifi_py(
             K0_dB=K0_dB,
             K_decay=K_decay,
             shadow_sigma_dB=shadow_sigma_dB,
-            user_positions=user_positions[u, :, :]  # pass this user's trajectory
+            user_positions=user_positions[u, :, :]
         )
         sinr_dB = 10*np.log10(sinr_linear + 1e-12)
         handover_all[u, :] = handover_decision(sinr_dB, hysteresis_dB)
@@ -336,28 +306,34 @@ def simulate_multi_user_wifi_py(
         bins, counts = np.unique(handover_all[:, t], return_counts=True)
         n_users_on_ap[bins-1, t] = counts
 
-    # Compute throughput and other metrics for all users
+    # Compute throughput and other metrics for all users with per-user adaptive MCS
     throughput_all, mac_all, per_all = [], [], []
     retries_all, collisions_all, sinr_all, distance_all = [], [], [], []
 
     for u in range(n_users):
-        sinr_linear = 10**(sinr_matrix_all[u,:,:] / 10)
+        # Per-user serving AP
+        serving_ap_idx = handover_all[u, :] - 1  # 0-based index
+        sinr_linear_user = 10**(sinr_matrix_all[u,:,:] / 10)
+
+        # Prepare per-user SINR matrix to feed compute_throughput_all
+        sinr_per_user = sinr_linear_user[serving_ap_idx, np.arange(n_steps)]
+
+        # We need shape (1, n_steps) for compute_throughput_all
+        sinr_per_user = sinr_per_user.reshape(1, n_steps)
+
+        # Compute per-user throughput with adaptive MCS
         thr, mac, per, retries, coll = compute_throughput_all(
-            sinr_linear,
-            n_users_on_ap,
+            sinr_per_user,
+            n_users_on_ap[serving_ap_idx, np.arange(n_steps)].reshape(1, n_steps),
             packet_size_bytes=packet_size_bytes,
             max_retries=max_retries
         )
 
-        # Map handover AP for this user to extract metrics
-        h0 = handover_all[u,:] - 1
-        idx_time = np.arange(n_steps)
-
-        throughput_all.append(thr[h0, idx_time].tolist())
-        mac_all.append(mac[h0, idx_time].tolist())
-        per_all.append(per[h0, idx_time].tolist())
-        retries_all.append(retries[h0, idx_time].tolist())
-        collisions_all.append(coll[h0, idx_time].tolist())
+        throughput_all.append(thr.flatten().tolist())
+        mac_all.append(mac.flatten().tolist())
+        per_all.append(per.flatten().tolist())
+        retries_all.append(retries.flatten().tolist())
+        collisions_all.append(coll.flatten().tolist())
         sinr_all.append(sinr_matrix_all[u,:,:].tolist())
         distance_all.append(dist_matrix[:,u,:].tolist())
 
