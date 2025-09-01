@@ -52,17 +52,17 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
   const handleArrayChange = (field: string, idx: number, value: any) => {
     setFormData((prev) => {
       const arr = [...(prev as any)[field]];
-      arr[idx] = value;
+      arr[idx] = value === "" ? "" : Number(value);
       return { ...prev, [field]: arr };
     });
   };
 
   // Helper to update AP positions
-  const handlePositionChange = (idx: number, axis: 0 | 1, value: number) => {
+  const handlePositionChange = (idx: number, axis: 0 | 1, value: any) => {
     setFormData((prev) => {
       const arr = [...prev.apPositions];
       arr[idx] = [...arr[idx]];
-      arr[idx][axis] = value;
+      arr[idx][axis] = value === "" ? 0 : Number(value);
       return { ...prev, apPositions: arr };
     });
   };
@@ -103,9 +103,34 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
     }
   };
 
+  // Helper for single value fields
+  const handleSingleValueChange = (field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value === "" ? "" : Number(value),
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    // Convert all empty string fields to default values before submit
+    const cleanedFormData: Record<string, any> = { ...formData };
+    Object.keys(cleanedFormData).forEach((key) => {
+      if (typeof cleanedFormData[key] === "string" && cleanedFormData[key] === "") {
+        cleanedFormData[key] = 0;
+      }
+      if (Array.isArray(cleanedFormData[key])) {
+        cleanedFormData[key] = cleanedFormData[key].map((v: any) =>
+          v === "" ? 0 : v
+        );
+      }
+      if (key === "apPositions" && Array.isArray(cleanedFormData[key])) {
+        cleanedFormData[key] = cleanedFormData[key].map((pos: any[]) =>
+          pos.map((v: any) => (v === "" ? 0 : v))
+        );
+      }
+    });
+    onSubmit(cleanedFormData);
   };
 
   return (
@@ -126,12 +151,12 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
           </Typography>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}  {...({} as any)}>
+              <Grid item xs={12} md={6} {...({} as any)}>
                 <TextField
                   label="Simulation Time (s)"
                   name="simulationTime"
-                  value={formData.simulationTime}
-                  onChange={e => setFormData({ ...formData, simulationTime: Number(e.target.value) })}
+                  value={formData.simulationTime === 0 ? "" : formData.simulationTime}
+                  onChange={e => handleSingleValueChange("simulationTime", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -141,8 +166,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Time Step (s)"
                   name="timeStep"
-                  value={formData.timeStep}
-                  onChange={e => setFormData({ ...formData, timeStep: Number(e.target.value) })}
+                  value={formData.timeStep === 0 ? "" : formData.timeStep}
+                  onChange={e => handleSingleValueChange("timeStep", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -152,8 +177,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Number of Nodes"
                   name="numberOfNodes"
-                  value={formData.numberOfNodes}
-                  onChange={e => setFormData({ ...formData, numberOfNodes: Number(e.target.value) })}
+                  value={formData.numberOfNodes === 0 ? "" : formData.numberOfNodes}
+                  onChange={e => handleSingleValueChange("numberOfNodes", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -163,8 +188,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Velocity (m/s)"
                   name="velocity"
-                  value={formData.velocity}
-                  onChange={e => setFormData({ ...formData, velocity: Number(e.target.value) })}
+                  value={formData.velocity === 0 ? "" : formData.velocity}
+                  onChange={e => handleSingleValueChange("velocity", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -174,8 +199,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Path Loss Exponent"
                   name="pathLossExponent"
-                  value={formData.pathLossExponent}
-                  onChange={e => setFormData({ ...formData, pathLossExponent: Number(e.target.value) })}
+                  value={formData.pathLossExponent === 0 ? "" : formData.pathLossExponent}
+                  onChange={e => handleSingleValueChange("pathLossExponent", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -185,8 +210,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Data Size"
                   name="dataSize"
-                  value={formData.dataSize}
-                  onChange={e => setFormData({ ...formData, dataSize: Number(e.target.value) })}
+                  value={formData.dataSize === 0 ? "" : formData.dataSize}
+                  onChange={e => handleSingleValueChange("dataSize", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -196,8 +221,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="K0 (dB)"
                   name="K0dB"
-                  value={formData.K0dB}
-                  onChange={e => setFormData({ ...formData, K0dB: Number(e.target.value) })}
+                  value={formData.K0dB === 0 ? "" : formData.K0dB}
+                  onChange={e => handleSingleValueChange("K0dB", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -207,8 +232,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="K Decay"
                   name="KDecay"
-                  value={formData.KDecay}
-                  onChange={e => setFormData({ ...formData, KDecay: Number(e.target.value) })}
+                  value={formData.KDecay === 0 ? "" : formData.KDecay}
+                  onChange={e => handleSingleValueChange("KDecay", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -218,8 +243,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Shadow Sigma (dB)"
                   name="shadowSigmaDB"
-                  value={formData.shadowSigmaDB}
-                  onChange={e => setFormData({ ...formData, shadowSigmaDB: Number(e.target.value) })}
+                  value={formData.shadowSigmaDB === 0 ? "" : formData.shadowSigmaDB}
+                  onChange={e => handleSingleValueChange("shadowSigmaDB", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -229,8 +254,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Max Retries"
                   name="maxRetries"
-                  value={formData.maxRetries}
-                  onChange={e => setFormData({ ...formData, maxRetries: Number(e.target.value) })}
+                  value={formData.maxRetries === 0 ? "" : formData.maxRetries}
+                  onChange={e => handleSingleValueChange("maxRetries", e.target.value)}
                   fullWidth
                   margin="dense"
                   required
@@ -243,7 +268,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                   <TextField
                     label="Number of Access Points"
                     name="numberOfAccessPoints"
-                    value={formData.numberOfAccessPoints}
+                    value={formData.numberOfAccessPoints === 0 ? "" : formData.numberOfAccessPoints}
                     onChange={e => handleNumAPsChange(Number(e.target.value))}
                     type="number"
                     size="small"
@@ -274,22 +299,22 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.apPositions.map((pos: number[], idx: number) => (
+                {formData.apPositions.map((pos: any[], idx: number) => (
                   <Box key={idx} sx={{ display: "flex", gap: 1, mb: 2, mt: 1 }}>
                     <TextField
                       label={`AP${idx + 1} X`}
                       type="number"
                       size="small"
-                      value={pos[0]}
-                      onChange={e => handlePositionChange(idx, 0, Number(e.target.value))}
+                      value={pos[0] === 0 ? "" : pos[0]}
+                      onChange={e => handlePositionChange(idx, 0, e.target.value)}
                       sx={{ width: 80 }}
                     />
                     <TextField
                       label={`AP${idx + 1} Y`}
                       type="number"
                       size="small"
-                      value={pos[1]}
-                      onChange={e => handlePositionChange(idx, 1, Number(e.target.value))}
+                      value={pos[1] === 0 ? "" : pos[1]}
+                      onChange={e => handlePositionChange(idx, 1, e.target.value)}
                       sx={{ width: 80 }}
                     />
                   </Box>
@@ -312,14 +337,14 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.transmissionPowers.map((val: number, idx: number) => (
+                {formData.transmissionPowers.map((val: any, idx: number) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Power (dBm)`}
                     type="number"
                     size="small"
-                    value={val}
-                    onChange={e => handleArrayChange("transmissionPowers", idx, Number(e.target.value))}
+                    value={val === 0 ? "" : val}
+                    onChange={e => handleArrayChange("transmissionPowers", idx, e.target.value)}
                     sx={{ width: 120, mb: 2, mt: 1 }}
                   />
                 ))}
@@ -341,14 +366,14 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.frequencies.map((val: number, idx: number) => (
+                {formData.frequencies.map((val: any, idx: number) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Freq (Hz)`}
                     type="number"
                     size="small"
-                    value={val}
-                    onChange={e => handleArrayChange("frequencies", idx, Number(e.target.value))}
+                    value={val === 0 ? "" : val}
+                    onChange={e => handleArrayChange("frequencies", idx, e.target.value)}
                     sx={{ width: 160, mb: 2, mt: 1 }}
                   />
                 ))}
@@ -370,14 +395,14 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.bandwidths.map((val: number, idx: number) => (
+                {formData.bandwidths.map((val: any, idx: number) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Bandwidth (Hz)`}
                     type="number"
                     size="small"
-                    value={val}
-                    onChange={e => handleArrayChange("bandwidths", idx, Number(e.target.value))}
+                    value={val === 0 ? "" : val}
+                    onChange={e => handleArrayChange("bandwidths", idx, e.target.value)}
                     sx={{ width: 160, mb: 2, mt: 1 }}
                   />
                 ))}
@@ -399,14 +424,14 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.antennaGains.map((val: number, idx: number) => (
+                {formData.antennaGains.map((val: any, idx: number) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Antenna Gain (dBi)`}
                     type="number"
                     size="small"
-                    value={val}
-                    onChange={e => handleArrayChange("antennaGains", idx, Number(e.target.value))}
+                    value={val === 0 ? "" : val}
+                    onChange={e => handleArrayChange("antennaGains", idx, e.target.value)}
                     sx={{ width: 120, mb: 2, mt: 1 }}
                   />
                 ))}
@@ -428,14 +453,14 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.beamwidths.map((val: number, idx: number) => (
+                {formData.beamwidths.map((val: any, idx: number) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Beamwidth (deg)`}
                     type="number"
                     size="small"
-                    value={val}
-                    onChange={e => handleArrayChange("beamwidths", idx, Number(e.target.value))}
+                    value={val === 0 ? "" : val}
+                    onChange={e => handleArrayChange("beamwidths", idx, e.target.value)}
                     sx={{ width: 120, mb: 2, mt: 1 }}
                   />
                 ))}
