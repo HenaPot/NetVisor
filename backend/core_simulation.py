@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.stats import norm
-from backend.mobility import generate_realistic_user_positions
+from mobility import generate_realistic_user_positions
 
 
 def interference_factor(freq_diff_Hz, channel_bandwidth_Hz):
