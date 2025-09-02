@@ -67,14 +67,6 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
     });
   };
 
-  // Handle preset selection
-  const handlePreset = (field: string, preset: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: preset,
-    }));
-  };
-
   // Handle number of APs change
   const handleNumAPsChange = (num: number) => {
     setFormData((prev) => {
