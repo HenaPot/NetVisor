@@ -1,5 +1,5 @@
 import numpy as np
-from backend import matlab_simulation as ws
+from backend import core_simulation as ws
 
 
 def test_interference_factor_basic():

@@ -1,15 +1,11 @@
-import matlab.engine
-
-eng = matlab.engine.start_matlab()
-
 def build_environment(data: dict):
     """
     Builds an environment dictionary for multi-user WiFi simulation.
     """
-    simulation_time = float(data.get('simulationTime', 30.0))   # in seconds
-    time_step = float(data.get('timeStep', 1.0))                # in seconds
+    simulation_time = float(data.get('simulationTime', 30.0))   
+    time_step = float(data.get('timeStep', 1.0))                
     num_nodes = int(data.get('numberOfNodes', 3))
-    velocity = float(data.get('velocity', 1.5))                 # meters per second
+    velocity = float(data.get('velocity', 1.5))                 
     path_loss_exp = float(data.get('pathLossExponent', 3.2))
     num_aps = int(data.get('numberOfAccessPoints', 3))
     data_size = float(data.get('dataSize', 1000))
