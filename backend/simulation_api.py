@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from backend.core_simulation import run_multiuser_wifi_simulation
+from core_simulation import run_multiuser_wifi_simulation
 from environment import build_environment
 
 app = Flask(__name__)
