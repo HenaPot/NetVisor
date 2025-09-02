@@ -82,7 +82,7 @@ const WirelessSimDashboard = () => {
               <Typography sx={{ mt: 2 }}>Running simulation...</Typography>
             </Box>
           ) : result ? (
-            <Grid container spacing={3} sx={{ width: "100%", margin: 0 }}>
+            <Grid container direction="column" spacing={3} sx={{ width: "100%", margin: 0 }}>
               <Grid item xs={12} {...({} as any)}>
                 <SINRChartCard 
                   sinr={result.users_sinr} 
@@ -91,26 +91,26 @@ const WirelessSimDashboard = () => {
                   error={result.error} 
                 />
               </Grid>
-              <Grid item xs={12} md={6} {...({} as any)}>
+              <Grid item xs={12} {...({} as any)}>
                 <ThroughputChartCard 
                   throughput={result.users_throughput} 
                   macThroughput={result.users_mac_throughput}
                   time={result.time} 
                 />
               </Grid>
-              <Grid item xs={12} md={6} {...({} as any)}>
+              <Grid item xs={12} {...({} as any)}>
                 <PERChartCard 
                   per={result.users_per} 
                   time={result.time} 
                 />
               </Grid>
-              <Grid item xs={12} md={6} {...({} as any)}>
+              <Grid item xs={12} {...({} as any)}>
                 <HandoverChartCard 
                   handover={result.users_handover} 
                   time={result.time} 
                 />
               </Grid>
-              <Grid item xs={12} md={6} {...({} as any)}>
+              <Grid item xs={12} {...({} as any)}>
                 <CollisionChartCard 
                   collision={result.users_collision} 
                   retries={result.users_retries}
