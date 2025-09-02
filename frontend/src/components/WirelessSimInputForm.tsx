@@ -155,7 +155,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Simulation Time (s)"
                   name="simulationTime"
-                  value={formData.simulationTime === 0 ? "" : formData.simulationTime}
+                  value={formData.simulationTime}
                   onChange={e => handleSingleValueChange("simulationTime", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -166,7 +166,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Time Step (s)"
                   name="timeStep"
-                  value={formData.timeStep === 0 ? "" : formData.timeStep}
+                  value={formData.timeStep}
                   onChange={e => handleSingleValueChange("timeStep", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -177,7 +177,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Number of Nodes"
                   name="numberOfNodes"
-                  value={formData.numberOfNodes === 0 ? "" : formData.numberOfNodes}
+                  value={formData.numberOfNodes}
                   onChange={e => handleSingleValueChange("numberOfNodes", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -188,7 +188,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Velocity (m/s)"
                   name="velocity"
-                  value={formData.velocity === 0 ? "" : formData.velocity}
+                  value={formData.velocity}
                   onChange={e => handleSingleValueChange("velocity", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -199,7 +199,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Path Loss Exponent"
                   name="pathLossExponent"
-                  value={formData.pathLossExponent === 0 ? "" : formData.pathLossExponent}
+                  value={formData.pathLossExponent}
                   onChange={e => handleSingleValueChange("pathLossExponent", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -210,7 +210,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Data Size"
                   name="dataSize"
-                  value={formData.dataSize === 0 ? "" : formData.dataSize}
+                  value={formData.dataSize}
                   onChange={e => handleSingleValueChange("dataSize", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -221,7 +221,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="K0 (dB)"
                   name="K0dB"
-                  value={formData.K0dB === 0 ? "" : formData.K0dB}
+                  value={formData.K0dB}
                   onChange={e => handleSingleValueChange("K0dB", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -232,7 +232,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="K Decay"
                   name="KDecay"
-                  value={formData.KDecay === 0 ? "" : formData.KDecay}
+                  value={formData.KDecay}
                   onChange={e => handleSingleValueChange("KDecay", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -243,7 +243,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Shadow Sigma (dB)"
                   name="shadowSigmaDB"
-                  value={formData.shadowSigmaDB === 0 ? "" : formData.shadowSigmaDB}
+                  value={formData.shadowSigmaDB}
                   onChange={e => handleSingleValueChange("shadowSigmaDB", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -254,7 +254,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   label="Max Retries"
                   name="maxRetries"
-                  value={formData.maxRetries === 0 ? "" : formData.maxRetries}
+                  value={formData.maxRetries}
                   onChange={e => handleSingleValueChange("maxRetries", e.target.value)}
                   fullWidth
                   margin="dense"
@@ -268,7 +268,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                   <TextField
                     label="Number of Access Points"
                     name="numberOfAccessPoints"
-                    value={formData.numberOfAccessPoints === 0 ? "" : formData.numberOfAccessPoints}
+                    value={formData.numberOfAccessPoints}
                     onChange={e => handleNumAPsChange(Number(e.target.value))}
                     type="number"
                     size="small"
@@ -305,7 +305,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                       label={`AP${idx + 1} X`}
                       type="number"
                       size="small"
-                      value={pos[0] === 0 ? "" : pos[0]}
+                      value={pos[0]}
                       onChange={e => handlePositionChange(idx, 0, e.target.value)}
                       sx={{ width: 80 }}
                     />
@@ -313,7 +313,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                       label={`AP${idx + 1} Y`}
                       type="number"
                       size="small"
-                      value={pos[1] === 0 ? "" : pos[1]}
+                      value={pos[1]}
                       onChange={e => handlePositionChange(idx, 1, e.target.value)}
                       sx={{ width: 80 }}
                     />
@@ -343,7 +343,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     label={`AP${idx + 1} Power (dBm)`}
                     type="number"
                     size="small"
-                    value={val === 0 ? "" : val}
+                    value={val}
                     onChange={e => handleArrayChange("transmissionPowers", idx, e.target.value)}
                     sx={{ width: 120, mb: 2, mt: 1 }}
                   />
@@ -372,7 +372,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     label={`AP${idx + 1} Freq (Hz)`}
                     type="number"
                     size="small"
-                    value={val === 0 ? "" : val}
+                    value={val}
                     onChange={e => handleArrayChange("frequencies", idx, e.target.value)}
                     sx={{ width: 160, mb: 2, mt: 1 }}
                   />
@@ -401,7 +401,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     label={`AP${idx + 1} Bandwidth (Hz)`}
                     type="number"
                     size="small"
-                    value={val === 0 ? "" : val}
+                    value={val}
                     onChange={e => handleArrayChange("bandwidths", idx, e.target.value)}
                     sx={{ width: 160, mb: 2, mt: 1 }}
                   />
@@ -430,7 +430,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     label={`AP${idx + 1} Antenna Gain (dBi)`}
                     type="number"
                     size="small"
-                    value={val === 0 ? "" : val}
+                    value={val}
                     onChange={e => handleArrayChange("antennaGains", idx, e.target.value)}
                     sx={{ width: 120, mb: 2, mt: 1 }}
                   />
@@ -459,7 +459,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     label={`AP${idx + 1} Beamwidth (deg)`}
                     type="number"
                     size="small"
-                    value={val === 0 ? "" : val}
+                    value={val}
                     onChange={e => handleArrayChange("beamwidths", idx, e.target.value)}
                     sx={{ width: 120, mb: 2, mt: 1 }}
                   />

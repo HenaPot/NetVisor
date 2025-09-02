@@ -8,7 +8,7 @@ from environment import build_environment
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-@app.route("/api/multiuser_simulation", methods=["POST"])
+@app.route("/api/simulation", methods=["POST"])
 def handle_multiuser_simulation():
     data = request.get_json()
     env = build_environment(data)

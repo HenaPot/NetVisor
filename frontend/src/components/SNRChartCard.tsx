@@ -1,5 +1,6 @@
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import Grid from "@mui/material/Grid";
+import { COLORS } from "../data/colors.ts";
 import {
   LineChart,
   Line,
@@ -12,49 +13,50 @@ import {
 } from "recharts";
 
 interface SNRChartCardProps {
-  snr?: number[][];
-  distance?: number[][];
+  sinr?: number[][][];
+  distance?: number[][][];
   time?: number[];
   error?: string;
 }
 
-// Use your transform function (can be imported from a utils file)
 function transformSNRdata(
-  snr: number[][],
-  distance: number[][],
+  sinr: number[][][],
+  distance: number[][][],
   time: number[]
 ) {
-  const numNodes = snr.length;
+  const numUsers = sinr.length;
+  const numAPs = sinr[0].length;
   const numTimes = time.length;
 
   const chartData = [];
 
   for (let i = 0; i < numTimes; i++) {
     const dataPoint: Record<string, number> = { time: time[i] };
-    for (let nodeIdx = 0; nodeIdx < numNodes; nodeIdx++) {
-      dataPoint[`snr_node${nodeIdx + 1}`] = snr[nodeIdx][i];
-      dataPoint[`distance_node${nodeIdx + 1}`] = distance[nodeIdx][i];
+    
+    for (let userIdx = 0; userIdx < numUsers; userIdx++) {
+      // Find the best SINR across all APs for this user at this time
+      let bestSinr = -Infinity;
+      let bestDistance = 0;
+      
+      for (let apIdx = 0; apIdx < numAPs; apIdx++) {
+        if (sinr[userIdx][apIdx][i] > bestSinr) {
+          bestSinr = sinr[userIdx][apIdx][i];
+          bestDistance = distance[userIdx][apIdx][i];
+        }
+      }
+      
+      dataPoint[`sinr_user${userIdx + 1}`] = bestSinr;
+      dataPoint[`distance_user${userIdx + 1}`] = bestDistance;
     }
     chartData.push(dataPoint);
   }
   return chartData;
 }
 
-const COLORS = [
-  "#1976d2",
-  "#388e3c",
-  "#f57c00",
-  "#7b1fa2",
-  "#d32f2f",
-  "#00796b",
-  "#c2185b",
-  "#303f9f",
-]; // Add more colors if needed
-
-const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
+const SNRChartCard = ({ sinr, distance, time, error }: SNRChartCardProps) => {
   if (error) {
     return (
-      <Card sx={{ width: "100%", maxWidth: 1200, mx: "auto", boxShadow: 3 }}>
+      <Card sx={{ width: "100%", boxShadow: 3 }}>
         <CardContent>
           <Typography variant="h5" align="center" gutterBottom>
             Mobility-Driven Wi-Fi Simulation
@@ -67,42 +69,26 @@ const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
     );
   }
 
-  if (!snr || !distance || !time) {
-    return null; // or some placeholder/loading state
+  if (!sinr || !distance || !time) {
+    return null;
   }
 
-  const timeChartData = transformSNRdata(snr, distance, time);
-  const numNodes = snr.length;
+  const timeChartData = transformSNRdata(sinr, distance, time);
+  const numUsers = sinr.length;
 
   return (
-    <Card
-      sx={{
-        width: "100%",
-        maxWidth: 1300, // or your preferred max width
-        mx: "auto",
-        boxShadow: 3,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <CardContent sx={{ width: "100%" }}>
+    <Card sx={{ boxShadow: 3 }}>
+      <CardContent>
         <Typography variant="h5" align="center" gutterBottom>
-          Mobility-Driven Wi-Fi Simulation
+          Connectivity Analysis
         </Typography>
-        <Grid
-          container
-          spacing={4}
-          justifyContent="center"
-          alignItems="center"
-          sx={{ width: "100%", margin: 0 }}
-        >
+        <Grid container spacing={3}>
           <Grid item xs={12} md={6} {...({} as any)}>
             <Typography variant="subtitle1" align="center">
-              SNR vs Time (per Node)
+              SINR vs Time
             </Typography>
             <Box height={400}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={350}>
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={timeChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
@@ -110,25 +96,25 @@ const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
                     label={{
                       value: "Time (s)",
                       position: "insideBottomRight",
-                      offset: 0,
                     }}
                   />
                   <YAxis
                     label={{
-                      value: "SNR (dB)",
+                      value: "SINR (dB)",
                       angle: -90,
                       position: "insideLeft",
                     }}
                   />
                   <Tooltip />
-                  <Legend verticalAlign="bottom" height={50} />
-                  {Array.from({ length: numNodes }).map((_, idx) => (
+                  <Legend />
+                  {Array.from({ length: numUsers }).map((_, idx) => (
                     <Line
-                      key={`snr_node${idx + 1}`}
+                      key={`sinr_user${idx + 1}`}
                       type="monotone"
-                      dataKey={`snr_node${idx + 1}`}
+                      dataKey={`sinr_user${idx + 1}`}
                       stroke={COLORS[idx % COLORS.length]}
                       dot={false}
+                      name={`User ${idx + 1} SINR`}
                     />
                   ))}
                 </LineChart>
@@ -138,10 +124,10 @@ const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
 
           <Grid item xs={12} md={6} {...({} as any)}>
             <Typography variant="subtitle1" align="center">
-              Distance vs Time (per Node)
+              Distance vs Time
             </Typography>
             <Box height={400}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={350}>
+              <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={timeChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
@@ -149,7 +135,6 @@ const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
                     label={{
                       value: "Time (s)",
                       position: "insideBottomRight",
-                      offset: 0,
                     }}
                   />
                   <YAxis
@@ -160,14 +145,15 @@ const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
                     }}
                   />
                   <Tooltip />
-                  <Legend verticalAlign="bottom" height={50} />
-                  {Array.from({ length: numNodes }).map((_, idx) => (
+                  <Legend />
+                  {Array.from({ length: numUsers }).map((_, idx) => (
                     <Line
-                      key={`distance_node${idx + 1}`}
+                      key={`distance_user${idx + 1}`}
                       type="monotone"
-                      dataKey={`distance_node${idx + 1}`}
+                      dataKey={`distance_user${idx + 1}`}
                       stroke={COLORS[idx % COLORS.length]}
                       dot={false}
+                      name={`User ${idx + 1} Distance`}
                     />
                   ))}
                 </LineChart>
@@ -175,6 +161,9 @@ const SNRChartCard = ({ snr, distance, time, error }: SNRChartCardProps) => {
             </Box>
           </Grid>
         </Grid>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          SINR (Signal-to-Interference-plus-Noise Ratio) and distance to the best Access Point for each user.
+        </Typography>
       </CardContent>
     </Card>
   );

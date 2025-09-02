@@ -1,15 +1,32 @@
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { Box, CircularProgress, Typography, Grid, Card, CardContent } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
-import SNRChartCard from "../components/SNRChartCard";
 import { useEffect, useState } from "react";
 import EnvironmentSidebar from "../components/EnvironmentSidebar";
+import SNRChartCard from "../components/SNRChartCard";
+import ThroughputChartCard from "../components/ThroughputChartCard";
+import HandoverChartCard from "../components/HandoverChartCard";
+import PERChartCard from "../components/PERChartCard";
+import CollisionChartCard from "../components/CollisionChartCard";
+
+interface SimulationResult {
+  time: number[];
+  users_collision: number[][];
+  users_distance: number[][][];
+  users_handover: number[][];
+  users_mac_throughput: number[][];
+  users_per: number[][];
+  users_retries: number[][];
+  users_sinr: number[][][];
+  users_throughput: number[][];
+  error?: string;
+}
 
 const WirelessSimDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { formData } = location.state || {};
 
-  const [result, setResult] = useState<{ snr?: number[][]; distance?: number[][]; time?: number[]; error?: string } | null>(null);
+  const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -27,7 +44,18 @@ const WirelessSimDashboard = () => {
     })
       .then((response) => response.json())
       .then((data) => setResult(data))
-      .catch((error) => setResult({ error: error.message }))
+      .catch((error) => setResult({ 
+        error: error.message,
+        time: [],
+        users_collision: [],
+        users_distance: [],
+        users_handover: [],
+        users_mac_throughput: [],
+        users_per: [],
+        users_retries: [],
+        users_sinr: [],
+        users_throughput: []
+      }))
       .finally(() => setLoading(false));
   }, [formData, navigate]);
 
@@ -41,11 +69,10 @@ const WirelessSimDashboard = () => {
           minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center", // vertical centering
-          alignItems: "center",     // horizontal centering
           backgroundColor: "background.default",
           px: 2,
           py: 4,
+          ml: { md: '300px' }, // account for sidebar
         }}
       >
         <Box sx={{ width: "100%", maxWidth: 1400, mx: "auto" }}>
@@ -54,8 +81,45 @@ const WirelessSimDashboard = () => {
               <CircularProgress />
               <Typography sx={{ mt: 2 }}>Running simulation...</Typography>
             </Box>
+          ) : result ? (
+            <Grid container spacing={3}>
+              <Grid item xs={12} {...({} as any)}>
+                <SNRChartCard 
+                  sinr={result.users_sinr} 
+                  distance={result.users_distance} 
+                  time={result.time} 
+                  error={result.error} 
+                />
+              </Grid>
+              <Grid item xs={12} md={6} {...({} as any)}>
+                <ThroughputChartCard 
+                  throughput={result.users_throughput} 
+                  macThroughput={result.users_mac_throughput}
+                  time={result.time} 
+                />
+              </Grid>
+              <Grid item xs={12} md={6} {...({} as any)}>
+                <PERChartCard 
+                  per={result.users_per} 
+                  time={result.time} 
+                />
+              </Grid>
+              <Grid item xs={12} md={6} {...({} as any)}>
+                <HandoverChartCard 
+                  handover={result.users_handover} 
+                  time={result.time} 
+                />
+              </Grid>
+              <Grid item xs={12} md={6} {...({} as any)}>
+                <CollisionChartCard 
+                  collision={result.users_collision} 
+                  retries={result.users_retries}
+                  time={result.time} 
+                />
+              </Grid>
+            </Grid>
           ) : (
-          <SNRChartCard snr={result?.snr} distance={result?.distance} time={result?.time} error={result?.error} />
+            <Typography>No simulation results available</Typography>
           )}
         </Box>
       </Box>
