@@ -1,5 +1,5 @@
 // src/pages/WirelessSimDashboard.tsx
-import { Box, CircularProgress, Typography, Grid, Card, CardContent } from "@mui/material";
+import { Box, CircularProgress, Typography, Grid, } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import EnvironmentSidebar from "../components/EnvironmentSidebar";
@@ -29,6 +29,7 @@ const WirelessSimDashboard = () => {
 
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
   useEffect(() => {
     if (!formData) {
@@ -36,7 +37,7 @@ const WirelessSimDashboard = () => {
       return;
     }
     setLoading(true);
-    fetch("http://localhost:5000/api/simulation", {
+    fetch(`${API_URL}/api/simulation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
