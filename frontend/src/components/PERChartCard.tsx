@@ -1,3 +1,4 @@
+// src/components/PERChartCard.tsx
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import {
   LineChart,
@@ -9,13 +10,12 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { COLORS } from "../data/colors";
 
 interface PERChartCardProps {
   per?: number[][];
   time?: number[];
 }
-
-const COLORS = ["#d32f2f", "#7b1fa2", "#00796b"];
 
 const PERChartCard = ({ per, time }: PERChartCardProps) => {
   if (!per || !time) {
@@ -31,12 +31,12 @@ const PERChartCard = ({ per, time }: PERChartCardProps) => {
   });
 
   return (
-    <Card sx={{ boxShadow: 3 }}>
-      <CardContent>
+    <Card sx={{ boxShadow: 3, width: "100%" }}>
+      <CardContent sx={{ width: "100%" }}>
         <Typography variant="h6" gutterBottom>
           Packet Error Rate (PER)
         </Typography>
-        <Box height={400}>
+        <Box height={400} sx={{ width: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />

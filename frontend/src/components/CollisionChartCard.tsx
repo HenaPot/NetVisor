@@ -1,3 +1,4 @@
+// src/components/CollisionChartCard.tsx
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import {
   BarChart,
@@ -11,14 +12,13 @@ import {
   ComposedChart,
   Line,
 } from "recharts";
+import { COLORS } from "../data/colors";
 
 interface CollisionChartCardProps {
   collision?: number[][];
   retries?: number[][];
   time?: number[];
 }
-
-const COLORS = ["#d32f2f", "#7b1fa2", "#00796b"];
 
 const CollisionChartCard = ({ collision, retries, time }: CollisionChartCardProps) => {
   if (!collision || !retries || !time) {
@@ -37,12 +37,12 @@ const CollisionChartCard = ({ collision, retries, time }: CollisionChartCardProp
   });
 
   return (
-    <Card sx={{ boxShadow: 3 }}>
-      <CardContent>
+    <Card sx={{ boxShadow: 3, width: "100%" }}>
+      <CardContent sx={{ width: "100%" }}>
         <Typography variant="h6" gutterBottom>
           Collisions and Retries
         </Typography>
-        <Box height={400}>
+        <Box height={400} sx={{ width: "100%" }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />

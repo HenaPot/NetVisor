@@ -1,6 +1,6 @@
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import Grid from "@mui/material/Grid";
-import { COLORS } from "../data/colors.ts";
+import { COLORS } from "../data/colors";
 import {
   LineChart,
   Line,
@@ -12,14 +12,14 @@ import {
   Legend,
 } from "recharts";
 
-interface SNRChartCardProps {
+interface SINRChartCardProps {
   sinr?: number[][][];
   distance?: number[][][];
   time?: number[];
   error?: string;
 }
 
-function transformSNRdata(
+function transformSINRdata(
   sinr: number[][][],
   distance: number[][][],
   time: number[]
@@ -53,7 +53,7 @@ function transformSNRdata(
   return chartData;
 }
 
-const SNRChartCard = ({ sinr, distance, time, error }: SNRChartCardProps) => {
+const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
   if (error) {
     return (
       <Card sx={{ width: "100%", boxShadow: 3 }}>
@@ -73,21 +73,21 @@ const SNRChartCard = ({ sinr, distance, time, error }: SNRChartCardProps) => {
     return null;
   }
 
-  const timeChartData = transformSNRdata(sinr, distance, time);
+  const timeChartData = transformSINRdata(sinr, distance, time);
   const numUsers = sinr.length;
 
   return (
-    <Card sx={{ boxShadow: 3 }}>
-      <CardContent>
+    <Card sx={{ boxShadow: 3, width: "100%" }}>
+      <CardContent sx={{ width: "100%" }}>
         <Typography variant="h5" align="center" gutterBottom>
           Connectivity Analysis
         </Typography>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6} {...({} as any)}>
+        <Grid container spacing={3} sx={{ width: "100%", margin: 0 }}>
+          <Grid item xs={12} md={6} sx={{ width: "100%" }} {...({} as any)}>
             <Typography variant="subtitle1" align="center">
               SINR vs Time
             </Typography>
-            <Box height={400}>
+            <Box height={400} sx={{ width: "100%" }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={timeChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -122,11 +122,11 @@ const SNRChartCard = ({ sinr, distance, time, error }: SNRChartCardProps) => {
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={6} {...({} as any)}>
+          <Grid item xs={12} md={6} sx={{ width: "100%" }} {...({} as any)}>
             <Typography variant="subtitle1" align="center">
               Distance vs Time
             </Typography>
-            <Box height={400}>
+            <Box height={400} sx={{ width: "100%" }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={timeChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -169,4 +169,4 @@ const SNRChartCard = ({ sinr, distance, time, error }: SNRChartCardProps) => {
   );
 };
 
-export default SNRChartCard;
+export default SINRChartCard;

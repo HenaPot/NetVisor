@@ -1,3 +1,4 @@
+// src/components/EnvironmentSidebar.tsx
 import { useState } from "react";
 import {
   Drawer,
@@ -27,27 +28,37 @@ const EnvironmentSidebar = ({ formData }: EnvironmentSidebarProps) => {
           position: "fixed",
           top: 16,
           left: 16,
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-          display: open ? "none" : "inline-flex",
+          zIndex: (theme) => theme.zIndex.drawer + 2, // Increased z-index
+          backgroundColor: "background.paper",
+          boxShadow: 2,
+          "&:hover": {
+            backgroundColor: "action.hover",
+          },
         }}
         color="inherit"
       >
         <MenuIcon />
       </IconButton>
       <Drawer
+        variant="temporary"
         anchor="left"
         open={open}
         onClose={() => setOpen(false)}
-        ModalProps={{
-          BackdropProps: {
-            invisible: true, // No dark overlay
+        sx={{
+          "& .MuiDrawer-paper": {
+            boxSizing: "border-box",
+            width: 300,
+            zIndex: (theme) => theme.zIndex.drawer + 1,
           },
         }}
+        ModalProps={{
+          keepMounted: true, // Better mobile performance
+        }}
       >
-        <Box sx={{ width: 300, p: 2 }}>
+        <Box sx={{ width: 300, p: 2, height: "100%" }}>
           <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Simulation Input
+              Simulation Parameters
             </Typography>
             <IconButton onClick={() => setOpen(false)}>
               <CloseIcon />
@@ -56,14 +67,16 @@ const EnvironmentSidebar = ({ formData }: EnvironmentSidebarProps) => {
           <Divider />
           <List>
             {Object.entries(formData).map(([key, value]) => (
-              <ListItem key={key} disablePadding>
+              <ListItem key={key} disablePadding sx={{ py: 1 }}>
                 <ListItemText
-                  primary={key}
+                  primary={key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
                   secondary={
                     Array.isArray(value)
                       ? value.join(", ")
                       : value?.toString()
                   }
+                  primaryTypographyProps={{ variant: "body2", fontWeight: "bold" }}
+                  secondaryTypographyProps={{ variant: "body2" }}
                 />
               </ListItem>
             ))}

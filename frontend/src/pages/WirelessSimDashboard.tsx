@@ -1,8 +1,9 @@
+// src/pages/WirelessSimDashboard.tsx
 import { Box, CircularProgress, Typography, Grid, Card, CardContent } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import EnvironmentSidebar from "../components/EnvironmentSidebar";
-import SNRChartCard from "../components/SNRChartCard";
+import SINRChartCard from "../components/SINRChartCard"; // Updated import
 import ThroughputChartCard from "../components/ThroughputChartCard";
 import HandoverChartCard from "../components/HandoverChartCard";
 import PERChartCard from "../components/PERChartCard";
@@ -72,19 +73,18 @@ const WirelessSimDashboard = () => {
           backgroundColor: "background.default",
           px: 2,
           py: 4,
-          ml: { md: '300px' }, // account for sidebar
         }}
       >
-        <Box sx={{ width: "100%", maxWidth: 1400, mx: "auto" }}>
+        <Box sx={{ width: "100%", maxWidth: "100%", mx: "auto" }}>
           {loading ? (
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", height: 400, justifyContent: "center" }}>
               <CircularProgress />
               <Typography sx={{ mt: 2 }}>Running simulation...</Typography>
             </Box>
           ) : result ? (
-            <Grid container spacing={3}>
+            <Grid container spacing={3} sx={{ width: "100%", margin: 0 }}>
               <Grid item xs={12} {...({} as any)}>
-                <SNRChartCard 
+                <SINRChartCard 
                   sinr={result.users_sinr} 
                   distance={result.users_distance} 
                   time={result.time} 
