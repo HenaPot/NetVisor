@@ -1,24 +1,27 @@
-import matlab.engine
-
-eng = matlab.engine.start_matlab()
-
 def build_environment(data: dict):
     """
     Builds an environment dictionary for multi-user WiFi simulation.
     """
-    simulation_time = float(data.get('simulationTime', 30.0))   # in seconds
-    time_step = float(data.get('timeStep', 1.0))                # in seconds
+    simulation_time = float(data.get('simulationTime', 30.0))   
+    time_step = float(data.get('timeStep', 1.0))                
     num_nodes = int(data.get('numberOfNodes', 3))
-    velocity = float(data.get('velocity', 1.5))                 # meters per second
+    velocity = float(data.get('velocity', 1.5))                 
     path_loss_exp = float(data.get('pathLossExponent', 3.2))
-    rician_K_dB = float(data.get('ricianKFactor_dB', 5.0))
     num_aps = int(data.get('numberOfAccessPoints', 3))
     data_size = float(data.get('dataSize', 1000))
     transmission_powers = data.get("transmissionPowers", [23.0] * num_aps)
     frequencies = data.get("frequencies", [2.4e9] * num_aps)
     bandwidths = data.get("bandwidths", [20e6] * num_aps)
     ap_positions = data.get("apPositions", [[0,0]]*num_aps)  
+    K0_dB = float(data.get("K0_dB", 5.0))
+    K_decay = float(data.get("K_decay", 0.1))
+    shadow_sigma_dB = float(data.get("shadow_sigma_dB", 3.0))
+    max_retries = int(data.get("maxRetries", 3))
+    antenna_gains = data.get("antennaGains", [0] * num_aps)
+    beamwidths = data.get("beamwidths", [360] * num_aps)
 
+    beamwidths = [float(b) for b in beamwidths]
+    antenna_gains = [float(g) for g in antenna_gains]
     transmission_powers = [float(p) for p in transmission_powers]
     frequencies = [float(f) for f in frequencies]
     bandwidths = [float(b) for b in bandwidths]
@@ -30,11 +33,16 @@ def build_environment(data: dict):
         "numberOfNodes": num_nodes,
         "velocity": velocity,
         "pathLossExponent": path_loss_exp,
-        "ricianKFactor_dB": rician_K_dB,
         "numberOfAccessPoints": num_aps,
         "dataSize": data_size,
         "transmissionPowers": transmission_powers,
         "frequencies": frequencies,
         "bandwidths": bandwidths,
         "apPositions": ap_positions,
+        "K0dB": K0_dB,
+        "KDecay": K_decay,
+        "shadowSigmaDB": shadow_sigma_dB,
+        "maxRetries": max_retries,
+        "antennaGains": antenna_gains,
+        "beamwidths": beamwidths
     }
