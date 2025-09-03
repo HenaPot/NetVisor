@@ -6,7 +6,15 @@ const WirelessSimInputPage: React.FC = () => {
   const navigate = useNavigate();
 
   const handleFormSubmit = (formData: Record<string, any>) => {
-    navigate("/dashboard", { state: { formData } });
+    const simulationId = `sim-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    navigate("/dashboard", { 
+      state: { 
+        formData,
+        isHistorical: false,
+        simulationId
+      } 
+    });
   };
 
   return <WirelessSimInputForm onSubmit={handleFormSubmit} />;
