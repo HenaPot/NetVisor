@@ -14,9 +14,10 @@ import { COLORS } from "../data/colors";
 interface HandoverChartCardProps {
   handover?: number[][];
   time?: number[];
+  numberOfAPs?: number; 
 }
 
-const HandoverChartCard = ({ handover, time }: HandoverChartCardProps) => {
+const HandoverChartCard = ({ handover, time, numberOfAPs = 3 }: HandoverChartCardProps) => {
   if (!handover || !time) {
     return null;
   }
@@ -28,6 +29,9 @@ const HandoverChartCard = ({ handover, time }: HandoverChartCardProps) => {
     });
     return dataPoint;
   });
+
+  // Generate Y-axis ticks based on number of APs
+  const yAxisTicks = Array.from({ length: numberOfAPs }, (_, i) => i + 1);
 
   return (
     <Card sx={{ boxShadow: 3, width: "100%" }}>
@@ -42,8 +46,8 @@ const HandoverChartCard = ({ handover, time }: HandoverChartCardProps) => {
               <XAxis dataKey="time" label={{ value: "Time (s)", position: "insideBottomRight" }} />
               <YAxis 
                 label={{ value: "AP ID", angle: -90, position: "insideLeft" }}
-                domain={[0, 4]}
-                ticks={[1, 2, 3]}
+                domain={[0.5, numberOfAPs + 0.5]} // Adjust domain based on number of APs
+                ticks={yAxisTicks} // Use dynamically generated ticks
               />
               <Tooltip />
               <Legend />

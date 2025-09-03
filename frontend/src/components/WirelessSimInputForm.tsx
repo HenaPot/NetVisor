@@ -27,6 +27,18 @@ interface WirelessSimInputFormProps {
 
 const defaultNumAPs = 3;
 
+const arraysEqual = (a: any[], b: any[], tolerance = 0.001) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (Array.isArray(a[i]) && Array.isArray(b[i])) {
+      if (!arraysEqual(a[i], b[i], tolerance)) return false;
+    } else if (Math.abs(a[i] - b[i]) > tolerance) {
+      return false;
+    }
+  }
+  return true;
+};
+
 const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     simulationTime: 30,
@@ -48,6 +60,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
     beamwidths: [360, 360, 360],
   });
 
+  // Track which presets should show as Custom
+  const [customPresets, setCustomPresets] = useState({
+    positions: false,
+    power: false,
+    frequency: false,
+    bandwidth: false,
+    antennaGain: false,
+    beamwidth: false
+  });
+
   // Helper to update array fields
   const handleArrayChange = (field: string, idx: number, value: any) => {
     setFormData((prev) => {
@@ -55,6 +77,15 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
       arr[idx] = value === "" ? "" : Number(value);
       return { ...prev, [field]: arr };
     });
+    
+    // Mark this preset as custom when manually edited
+    const presetKey = field === "transmissionPowers" ? "power" :
+                     field === "frequencies" ? "frequency" :
+                     field === "bandwidths" ? "bandwidth" :
+                     field === "antennaGains" ? "antennaGain" :
+                     field === "beamwidths" ? "beamwidth" : "positions";
+    
+    setCustomPresets(prev => ({ ...prev, [presetKey]: true }));
   };
 
   // Helper to update AP positions
@@ -65,6 +96,8 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
       arr[idx][axis] = value === "" ? 0 : Number(value);
       return { ...prev, apPositions: arr };
     });
+    // Mark positions as custom when manually edited
+    setCustomPresets(prev => ({ ...prev, positions: true }));
   };
 
   // Handle number of APs change
@@ -84,6 +117,15 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
         antennaGains: updateArray(prev.antennaGains, 0),
         beamwidths: updateArray(prev.beamwidths, 360),
       };
+    });
+    // Reset all custom flags when number of APs changes
+    setCustomPresets({
+      positions: false,
+      power: false,
+      frequency: false,
+      bandwidth: false,
+      antennaGain: false,
+      beamwidth: false
     });
   };
 
@@ -123,6 +165,17 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
       }
     });
     onSubmit(cleanedFormData);
+  };
+
+  // Get the current preset label for each category
+  const getCurrentPresetLabel = (presets: any[], currentValues: any[], customKey: keyof typeof customPresets) => {
+    if (customPresets[customKey]) {
+      return "Custom";
+    }
+    const matchingPreset = presets.find(p => 
+      p.label !== "Custom" && arraysEqual(p[Object.keys(p)[1]], currentValues)
+    );
+    return matchingPreset?.label || "Custom";
   };
 
   return (
@@ -276,11 +329,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   select
                   label="AP Positions Preset"
-                  value={AP_POSITIONS_PRESETS.find(p => JSON.stringify(p.positions) === JSON.stringify(formData.apPositions))?.label || "Custom"}
+                  value={getCurrentPresetLabel(AP_POSITIONS_PRESETS, formData.apPositions, "positions")}
                   onChange={e => {
                     const preset = AP_POSITIONS_PRESETS.find(p => p.label === e.target.value);
-                    if (preset && preset.positions.length === formData.numberOfAccessPoints) {
-                      setFormData({ ...formData, apPositions: preset.positions });
+                    if (preset) {
+                      if (preset.label === "Custom") {
+                        setCustomPresets(prev => ({ ...prev, positions: true }));
+                      } else if (preset.positions.length === formData.numberOfAccessPoints) {
+                        setFormData({ ...formData, apPositions: preset.positions });
+                        setCustomPresets(prev => ({ ...prev, positions: false }));
+                      }
                     }
                   }}
                   fullWidth
@@ -314,11 +372,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   select
                   label="AP Power Preset"
-                  value={AP_POWER_PRESETS.find(p => JSON.stringify(p.powers) === JSON.stringify(formData.transmissionPowers))?.label || "Custom"}
+                  value={getCurrentPresetLabel(AP_POWER_PRESETS, formData.transmissionPowers, "power")}
                   onChange={e => {
                     const preset = AP_POWER_PRESETS.find(p => p.label === e.target.value);
-                    if (preset && preset.powers.length === formData.numberOfAccessPoints) {
-                      setFormData({ ...formData, transmissionPowers: preset.powers });
+                    if (preset) {
+                      if (preset.label === "Custom") {
+                        setCustomPresets(prev => ({ ...prev, power: true }));
+                      } else if (preset.powers.length === formData.numberOfAccessPoints) {
+                        setFormData({ ...formData, transmissionPowers: preset.powers });
+                        setCustomPresets(prev => ({ ...prev, power: false }));
+                      }
                     }
                   }}
                   fullWidth
@@ -343,11 +406,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   select
                   label="AP Frequency Preset"
-                  value={AP_FREQ_PRESETS.find(p => JSON.stringify(p.freqs) === JSON.stringify(formData.frequencies))?.label || "Custom"}
+                  value={getCurrentPresetLabel(AP_FREQ_PRESETS, formData.frequencies, "frequency")}
                   onChange={e => {
                     const preset = AP_FREQ_PRESETS.find(p => p.label === e.target.value);
-                    if (preset && preset.freqs.length === formData.numberOfAccessPoints) {
-                      setFormData({ ...formData, frequencies: preset.freqs });
+                    if (preset) {
+                      if (preset.label === "Custom") {
+                        setCustomPresets(prev => ({ ...prev, frequency: true }));
+                      } else if (preset.freqs.length === formData.numberOfAccessPoints) {
+                        setFormData({ ...formData, frequencies: preset.freqs });
+                        setCustomPresets(prev => ({ ...prev, frequency: false }));
+                      }
                     }
                   }}
                   fullWidth
@@ -358,7 +426,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.frequencies.map((val: any, idx: number) => (
+                {formData.frequencies.map((val: any, idx: any) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Freq (Hz)`}
@@ -372,11 +440,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   select
                   label="AP Bandwidth Preset"
-                  value={AP_BANDWIDTH_PRESETS.find(p => JSON.stringify(p.bandwidths) === JSON.stringify(formData.bandwidths))?.label || "Custom"}
+                  value={getCurrentPresetLabel(AP_BANDWIDTH_PRESETS, formData.bandwidths, "bandwidth")}
                   onChange={e => {
                     const preset = AP_BANDWIDTH_PRESETS.find(p => p.label === e.target.value);
-                    if (preset && preset.bandwidths.length === formData.numberOfAccessPoints) {
-                      setFormData({ ...formData, bandwidths: preset.bandwidths });
+                    if (preset) {
+                      if (preset.label === "Custom") {
+                        setCustomPresets(prev => ({ ...prev, bandwidth: true }));
+                      } else if (preset.bandwidths.length === formData.numberOfAccessPoints) {
+                        setFormData({ ...formData, bandwidths: preset.bandwidths });
+                        setCustomPresets(prev => ({ ...prev, bandwidth: false }));
+                      }
                     }
                   }}
                   fullWidth
@@ -387,7 +460,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.bandwidths.map((val: any, idx: number) => (
+                {formData.bandwidths.map((val: any, idx: any) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Bandwidth (Hz)`}
@@ -401,11 +474,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   select
                   label="AP Antenna Gain Preset"
-                  value={AP_ANTENNA_GAIN_PRESETS.find(p => JSON.stringify(p.gains) === JSON.stringify(formData.antennaGains))?.label || "Custom"}
+                  value={getCurrentPresetLabel(AP_ANTENNA_GAIN_PRESETS, formData.antennaGains, "antennaGain")}
                   onChange={e => {
                     const preset = AP_ANTENNA_GAIN_PRESETS.find(p => p.label === e.target.value);
-                    if (preset && preset.gains.length === formData.numberOfAccessPoints) {
-                      setFormData({ ...formData, antennaGains: preset.gains });
+                    if (preset) {
+                      if (preset.label === "Custom") {
+                        setCustomPresets(prev => ({ ...prev, antennaGain: true }));
+                      } else if (preset.gains.length === formData.numberOfAccessPoints) {
+                        setFormData({ ...formData, antennaGains: preset.gains });
+                        setCustomPresets(prev => ({ ...prev, antennaGain: false }));
+                      }
                     }
                   }}
                   fullWidth
@@ -416,7 +494,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.antennaGains.map((val: any, idx: number) => (
+                {formData.antennaGains.map((val: any, idx: any) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Antenna Gain (dBi)`}
@@ -430,11 +508,16 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                 <TextField
                   select
                   label="AP Beamwidth Preset"
-                  value={AP_BEAMWIDTH_PRESETS.find(p => JSON.stringify(p.beamwidths) === JSON.stringify(formData.beamwidths))?.label || "Custom"}
+                  value={getCurrentPresetLabel(AP_BEAMWIDTH_PRESETS, formData.beamwidths, "beamwidth")}
                   onChange={e => {
                     const preset = AP_BEAMWIDTH_PRESETS.find(p => p.label === e.target.value);
-                    if (preset && preset.beamwidths.length === formData.numberOfAccessPoints) {
-                      setFormData({ ...formData, beamwidths: preset.beamwidths });
+                    if (preset) {
+                      if (preset.label === "Custom") {
+                        setCustomPresets(prev => ({ ...prev, beamwidth: true }));
+                      } else if (preset.beamwidths.length === formData.numberOfAccessPoints) {
+                        setFormData({ ...formData, beamwidths: preset.beamwidths });
+                        setCustomPresets(prev => ({ ...prev, beamwidth: false }));
+                      }
                     }
                   }}
                   fullWidth
@@ -445,7 +528,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     <MenuItem key={p.label} value={p.label}>{p.label}</MenuItem>
                   ))}
                 </TextField>
-                {formData.beamwidths.map((val: any, idx: number) => (
+                {formData.beamwidths.map((val: any, idx: any) => (
                   <TextField
                     key={idx}
                     label={`AP${idx + 1} Beamwidth (deg)`}

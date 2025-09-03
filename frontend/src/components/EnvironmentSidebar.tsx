@@ -146,23 +146,25 @@ const EnvironmentSidebar = ({
 
   return (
     <>
-      <IconButton
-        onClick={toggleSidebar(true)}
-        sx={{
-          position: "fixed",
-          top: 16,
-          left: 16,
-          zIndex: (theme) => theme.zIndex.drawer + 2,
-          backgroundColor: "background.paper",
-          boxShadow: 2,
-          "&:hover": {
-            backgroundColor: "action.hover",
-          },
-        }}
-        color="inherit"
-      >
-        <MenuIcon />
-      </IconButton>
+      {!open && (
+        <IconButton
+          onClick={toggleSidebar(true)}
+          sx={{
+            position: "fixed",
+            top: 16,
+            left: 16,
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+            backgroundColor: "background.paper",
+            boxShadow: 2,
+            "&:hover": {
+              backgroundColor: "action.hover",
+            },
+          }}
+          color="inherit"
+        >
+          <MenuIcon />
+        </IconButton>
+      )}
       
       <SwipeableDrawer
         anchor="left"

@@ -280,6 +280,7 @@ const WirelessSimDashboard = () => {
                 <HandoverChartCard 
                   handover={result.users_handover} 
                   time={result.time} 
+                  numberOfAPs={formData.numberOfAccessPoints}
                 />
               </Grid>
               <Grid item xs={12} {...({} as any)}>
