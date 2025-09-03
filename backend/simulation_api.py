@@ -8,9 +8,6 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.route("/api/simulation", methods=["POST"])
 def handle_multiuser_simulation():
-    if request.method == "OPTIONS":
-        return jsonify({}), 200
-    
     data = request.get_json()
     env = build_environment(data)
     result = run_multiuser_wifi_simulation(env)
