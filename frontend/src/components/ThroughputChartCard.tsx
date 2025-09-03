@@ -1,4 +1,3 @@
-// src/components/ThroughputChartCard.tsx
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import {
   LineChart,

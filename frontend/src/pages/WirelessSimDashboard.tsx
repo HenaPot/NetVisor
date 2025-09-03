@@ -1,9 +1,9 @@
-// src/pages/WirelessSimDashboard.tsx
-import { Box, CircularProgress, Typography, Grid, } from "@mui/material";
+import { Box, CircularProgress, Typography, Grid, IconButton, } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EnvironmentSidebar from "../components/EnvironmentSidebar";
-import SINRChartCard from "../components/SINRChartCard"; // Updated import
+import SINRChartCard from "../components/SINRChartCard";
 import ThroughputChartCard from "../components/ThroughputChartCard";
 import HandoverChartCard from "../components/HandoverChartCard";
 import PERChartCard from "../components/PERChartCard";
@@ -66,6 +66,23 @@ const WirelessSimDashboard = () => {
   return (
     <>
       <EnvironmentSidebar formData={formData} />
+      <IconButton 
+        onClick={() => navigate(-1)} 
+        sx={{
+          position: "fixed",
+          top: 16,
+          right: 16,
+          zIndex: (theme) => theme.zIndex.drawer + 2, 
+          backgroundColor: "background.paper",
+          boxShadow: 2,
+          "&:hover": {
+            backgroundColor: "action.hover",
+          },
+        }}
+        aria-label="go back"
+      >
+        <ArrowBackIcon />
+      </IconButton>
       <Box
         sx={{
           minHeight: "100vh",

@@ -139,7 +139,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
       <Card sx={{ width: "100%", maxWidth: 600, mx: 1, boxShadow: 3, p: 1 }}>
         <CardContent>
           <Typography variant="h6" align="center" gutterBottom>
-            Wireless Simulation Input
+            NetVisor - Wireless Simulator
           </Typography>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2}>

@@ -1,4 +1,3 @@
-// src/components/EnvironmentSidebar.tsx
 import { useState } from "react";
 import {
   Drawer,

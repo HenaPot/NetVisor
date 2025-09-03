@@ -1,4 +1,3 @@
-// src/components/CollisionChartCard.tsx
 import { Card, CardContent, Typography, Box } from "@mui/material";
 import {
   Bar,
