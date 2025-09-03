@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react"; // Add useRef import
+import { useState, useEffect, useRef } from "react";
 import {
-  Drawer,
+  SwipeableDrawer,
   IconButton,
   Box,
   Typography,
@@ -52,8 +52,16 @@ const EnvironmentSidebar = ({
     [key: string]: boolean;
   }>({});
 
+  // iOS detection for swipeable drawer
+  const iOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
   // Use a ref to track which simulations have been saved during this session
   const savedSimulationIdsRef = useRef<Set<string>>(new Set());
+
+  // Toggle sidebar
+  const toggleSidebar = (newOpen: boolean) => () => {
+    setOpen(newOpen);
+  };
 
   useEffect(() => {
     const savedHistory = localStorage.getItem("simulationHistory");
@@ -139,7 +147,7 @@ const EnvironmentSidebar = ({
   return (
     <>
       <IconButton
-        onClick={() => setOpen(true)}
+        onClick={toggleSidebar(true)}
         sx={{
           position: "fixed",
           top: 16,
@@ -156,28 +164,31 @@ const EnvironmentSidebar = ({
         <MenuIcon />
       </IconButton>
       
-      <Drawer
-        variant="temporary"
+      <SwipeableDrawer
         anchor="left"
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={toggleSidebar(false)}
+        onOpen={toggleSidebar(true)}
+        disableBackdropTransition={!iOS}
+        disableDiscovery={iOS}
         sx={{
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
             width: 400,
             zIndex: (theme) => theme.zIndex.drawer + 1,
+            "@media (max-width: 600px)": {
+              width: "85%",
+              maxWidth: "300px",
+            },
           },
         }}
-        ModalProps={{
-          keepMounted: true,
-        }}
       >
-        <Box sx={{ width: 400, height: "100%", display: "flex", flexDirection: "column" }}>
+        <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
           {/* Header */}
           <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <Typography variant="h6">Simulation Panel</Typography>
-              <IconButton onClick={() => setOpen(false)} size="small">
+              <IconButton onClick={toggleSidebar(false)} size="small">
                 <CloseIcon />
               </IconButton>
             </Box>
@@ -276,34 +287,34 @@ const EnvironmentSidebar = ({
                           </IconButton>
                         </ListItemButton>
                         
-                        <Collapse in={expandedSections[item.id]}>
-                          <Box sx={{ pl: 2, pr: 2, pb: 1 }}>
-                            <Typography variant="caption" color="textSecondary">
-                              Parameters:
-                            </Typography>
-                            <List dense>
-                              {Object.entries(item.formData).slice(0, 3).map(([key, value]) => (
-                                <ListItem key={key} sx={{ py: 0 }}>
-                                  <ListItemText
-                                    primary={key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                                    secondary={
-                                      Array.isArray(value)
-                                        ? value.join(", ")
-                                        : value?.toString()
-                                    }
-                                    primaryTypographyProps={{ variant: "caption", fontWeight: "bold" }}
-                                    secondaryTypographyProps={{ variant: "caption" }}
-                                  />
-                                </ListItem>
-                              ))}
-                              {Object.keys(item.formData).length > 3 && (
-                                <Typography variant="caption" color="textSecondary">
-                                  ...and {Object.keys(item.formData).length - 3} more parameters
-                                </Typography>
-                              )}
-                            </List>
-                          </Box>
-                        </Collapse>
+                      <Collapse in={expandedSections[item.id]}>
+                        <Box sx={{ pl: 2, pr: 2, pb: 1 }}>
+                          <Typography variant="caption" color="textSecondary">
+                            Parameters:
+                          </Typography>
+                          <List dense>
+                            {Object.entries(item.formData).slice(0, 3).map(([key, value]) => (
+                              <ListItem key={key} sx={{ py: 0 }}>
+                                <ListItemText
+                                  primary={key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                                  secondary={
+                                    Array.isArray(value)
+                                      ? value.join(", ")
+                                      : value?.toString()
+                                  }
+                                  primaryTypographyProps={{ variant: "caption", fontWeight: "bold" }}
+                                  secondaryTypographyProps={{ variant: "caption" }}
+                                />
+                              </ListItem>
+                            ))}
+                            {Object.keys(item.formData).length > 3 && (
+                              <Typography variant="caption" color="textSecondary">
+                                ...and {Object.keys(item.formData).length - 3} more parameters
+                              </Typography>
+                            )}
+                          </List>
+                        </Box>
+                      </Collapse>
                       </Box>
                     ))}
                   </List>
@@ -312,7 +323,7 @@ const EnvironmentSidebar = ({
             )}
           </Box>
         </Box>
-      </Drawer>
+      </SwipeableDrawer>
     </>
   );
 };
