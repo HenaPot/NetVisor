@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -39,6 +39,14 @@ const arraysEqual = (a: any[], b: any[], tolerance = 0.001) => {
   return true;
 };
 
+interface FormErrors {
+  numberOfNodes?: string;
+  numberOfAccessPoints?: string;
+  simulationTime?: string;
+  timeStep?: string;
+  [key: string]: string | undefined;
+}
+
 const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({
     simulationTime: 30,
@@ -60,6 +68,9 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
     beamwidths: [360, 360, 360],
   });
 
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [hasErrors, setHasErrors] = useState(false);
+
   // Track which presets should show as Custom
   const [customPresets, setCustomPresets] = useState({
     positions: false,
@@ -69,6 +80,61 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
     antennaGain: false,
     beamwidth: false
   });
+
+  // Validate form fields
+  const validateField = (field: string, value: any): string | undefined => {
+    switch (field) {
+      case "numberOfNodes":
+        if (value === "" || isNaN(value)) return "Number of Nodes is required";
+        if (value < 1 || value > 10) return "Number of Nodes must be between 1 and 10";
+        return undefined;
+      case "numberOfAccessPoints":
+        if (value === "" || isNaN(value)) return "Number of Access Points is required";
+        if (value < 1 || value > 10) return "Number of Access Points must be between 1 and 10";
+        return undefined;
+      case "simulationTime":
+        if (value === "" || isNaN(value)) return "Simulation Time is required";
+        if (value <= 0) return "Simulation Time must be greater than 0";
+        return undefined;
+      case "timeStep":
+        if (value === "" || isNaN(value)) return "Time Step is required";
+        if (value <= 0) return "Time Step must be greater than 0";
+        return undefined;
+      default:
+        return undefined;
+    }
+  };
+
+  // Validate all fields
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+    
+    // Validate numberOfNodes
+    const nodesError = validateField("numberOfNodes", formData.numberOfNodes);
+    if (nodesError) newErrors.numberOfNodes = nodesError;
+    
+    // Validate numberOfAccessPoints
+    const apsError = validateField("numberOfAccessPoints", formData.numberOfAccessPoints);
+    if (apsError) newErrors.numberOfAccessPoints = apsError;
+    
+    // Validate simulationTime
+    const timeError = validateField("simulationTime", formData.simulationTime);
+    if (timeError) newErrors.simulationTime = timeError;
+    
+    // Validate timeStep
+    const timeStepError = validateField("timeStep", formData.timeStep);
+    if (timeStepError) newErrors.timeStep = timeStepError;
+    
+    setErrors(newErrors);
+    const isValid = Object.keys(newErrors).length === 0;
+    setHasErrors(!isValid);
+    return isValid;
+  };
+
+  // Update hasErrors whenever formData changes
+  useEffect(() => {
+    validateForm();
+  }, [formData]);
 
   // Helper to update array fields
   const handleArrayChange = (field: string, idx: number, value: any) => {
@@ -102,6 +168,14 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
 
   // Handle number of APs change
   const handleNumAPsChange = (num: number) => {
+    // Validate the new number first
+    const error = validateField("numberOfAccessPoints", num);
+    if (error) {
+      setErrors(prev => ({ ...prev, numberOfAccessPoints: error }));
+    } else {
+      setErrors(prev => ({ ...prev, numberOfAccessPoints: undefined }));
+    }
+
     setFormData((prev) => {
       const updateArray = (arr: any[], def: any) =>
         Array(num)
@@ -130,7 +204,12 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
   };
 
   // Add/remove APs
-  const addAP = () => handleNumAPsChange(formData.numberOfAccessPoints + 1);
+  const addAP = () => {
+    if (formData.numberOfAccessPoints < 10) {
+      handleNumAPsChange(formData.numberOfAccessPoints + 1);
+    }
+  };
+  
   const removeAP = () => {
     if (formData.numberOfAccessPoints > 1) {
       handleNumAPsChange(formData.numberOfAccessPoints - 1);
@@ -139,14 +218,30 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
 
   // Helper for single value fields
   const handleSingleValueChange = (field: string, value: any) => {
+    const numericValue = value === "" ? "" : Number(value);
+    
+    // Validate the field
+    const error = validateField(field, numericValue);
+    if (error) {
+      setErrors(prev => ({ ...prev, [field]: error }));
+    } else {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [field]: value === "" ? "" : Number(value),
+      [field]: numericValue,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate the form before submission
+    if (!validateForm()) {
+      return;
+    }
+
     // Convert all empty string fields to default values before submit
     const cleanedFormData: Record<string, any> = { ...formData };
     Object.keys(cleanedFormData).forEach((key) => {
@@ -194,6 +289,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
           <Typography variant="h6" align="center" gutterBottom>
             NetVisor - Wireless Simulator
           </Typography>
+          
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6} {...({} as any)}>
@@ -207,6 +303,9 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                   required
                   type="number"
                   size="small"
+                  error={!!errors.simulationTime}
+                  helperText={errors.simulationTime}
+                  inputProps={{ min: 0.1, step: 0.1 }}
                 />
                 <TextField
                   label="Time Step (s)"
@@ -218,6 +317,9 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                   required
                   type="number"
                   size="small"
+                  error={!!errors.timeStep}
+                  helperText={errors.timeStep}
+                  inputProps={{ min: 0.1, step: 0.1 }}
                 />
                 <TextField
                   label="Number of Nodes"
@@ -229,6 +331,9 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                   required
                   type="number"
                   size="small"
+                  error={!!errors.numberOfNodes}
+                  helperText={errors.numberOfNodes}
+                  inputProps={{ min: 1, max: 10 }}
                 />
                 <TextField
                   label="Velocity (m/s)"
@@ -318,11 +423,23 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
                     type="number"
                     size="small"
                     sx={{ width: 180 }}
+                    error={!!errors.numberOfAccessPoints}
+                    helperText={errors.numberOfAccessPoints}
+                    inputProps={{ min: 1, max: 10 }}
                   />
-                  <IconButton onClick={addAP} size="small" sx={{ ml: 1 }}>
+                  <IconButton 
+                    onClick={addAP} 
+                    size="small" 
+                    sx={{ ml: 1 }}
+                    disabled={formData.numberOfAccessPoints >= 10}
+                  >
                     <AddIcon />
                   </IconButton>
-                  <IconButton onClick={removeAP} size="small">
+                  <IconButton 
+                    onClick={removeAP} 
+                    size="small"
+                    disabled={formData.numberOfAccessPoints <= 1}
+                  >
                     <RemoveIcon />
                   </IconButton>
                 </Box>
@@ -548,6 +665,7 @@ const WirelessSimInputForm: React.FC<WirelessSimInputFormProps> = ({ onSubmit })
               fullWidth
               sx={{ mt: 2 }}
               size="large"
+              disabled={hasErrors}
             >
               Simulate
             </Button>
