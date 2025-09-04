@@ -15,27 +15,31 @@ interface ThroughputChartCardProps {
   throughput?: number[][];
   macThroughput?: number[][];
   time?: number[];
+  selectedUsers: number[];
 }
 
 const formatThroughput = (value: number) => {
   return `${(value / 1e6).toFixed(2)} Mbps`;
 };
 
-const ThroughputChartCard = ({ throughput, macThroughput, time }: ThroughputChartCardProps) => {
+const ThroughputChartCard = ({ throughput, macThroughput, time, selectedUsers }: ThroughputChartCardProps) => {
   if (!throughput || !macThroughput || !time) {
     return null;
   }
 
-  const chartData = time.map((t, i) => {
-    const dataPoint: any = { time: t };
-    throughput.forEach((userThroughput, userIdx) => {
-      dataPoint[`user${userIdx + 1}_throughput`] = userThroughput[i];
-    });
-    macThroughput.forEach((userMacThroughput, userIdx) => {
-      dataPoint[`user${userIdx + 1}_mac`] = userMacThroughput[i];
-    });
-    return dataPoint;
+const chartData = time.map((t, i) => {
+  const dataPoint: any = { time: t };
+  selectedUsers.forEach((userIdx) => {
+    if (throughput[userIdx] && throughput[userIdx][i] !== undefined) {
+      dataPoint[`user${userIdx + 1}_throughput`] = throughput[userIdx][i];
+    }
+    if (macThroughput[userIdx] && macThroughput[userIdx][i] !== undefined) {
+      dataPoint[`user${userIdx + 1}_mac`] = macThroughput[userIdx][i];
+    }
   });
+  return dataPoint;
+});
+
 
   return (
     <Card sx={{ boxShadow: 3, width: "100%" }}>
@@ -47,33 +51,36 @@ const ThroughputChartCard = ({ throughput, macThroughput, time }: ThroughputChar
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
-              <YAxis 
+              <XAxis 
+                dataKey="time" 
+                label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} 
+              />
+              <YAxis
                 label={{ value: "Throughput", angle: -90, position: "insideLeft" }}
                 tickFormatter={formatThroughput}
               />
               <Tooltip formatter={(value) => formatThroughput(value as number)} />
               <Legend />
-              {throughput.map((_, idx) => (
+              {selectedUsers.map((userIdx, idx) => (
                 <Line
-                  key={`throughput-${idx}`}
+                  key={`throughput-${userIdx}`}
                   type="monotone"
-                  dataKey={`user${idx + 1}_throughput`}
-                  stroke={COLORS[idx]}
+                  dataKey={`user${userIdx + 1}_throughput`}
+                  stroke={COLORS[idx % COLORS.length]}
                   strokeWidth={2}
                   dot={false}
-                  name={`User ${idx + 1} Throughput`}
+                  name={`User ${userIdx + 1} Throughput`}
                 />
               ))}
-              {macThroughput.map((_, idx) => (
+              {selectedUsers.map((userIdx, idx) => (
                 <Line
-                  key={`mac-${idx}`}
+                  key={`mac-${userIdx}`}
                   type="monotone"
-                  dataKey={`user${idx + 1}_mac`}
-                  stroke={COLORS[idx]}
+                  dataKey={`user${userIdx + 1}_mac`}
+                  stroke={COLORS[idx % COLORS.length]}
                   strokeDasharray="5 5"
                   dot={false}
-                  name={`User ${idx + 1} MAC Throughput`}
+                  name={`User ${userIdx + 1} MAC Throughput`}
                 />
               ))}
             </LineChart>

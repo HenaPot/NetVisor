@@ -14,17 +14,20 @@ import { COLORS } from "../data/colors";
 interface PERChartCardProps {
   per?: number[][];
   time?: number[];
+  selectedUsers: number[];
 }
 
-const PERChartCard = ({ per, time }: PERChartCardProps) => {
+const PERChartCard = ({ per, time, selectedUsers }: PERChartCardProps) => {
   if (!per || !time) {
     return null;
   }
 
   const chartData = time.map((t, i) => {
     const dataPoint: any = { time: t };
-    per.forEach((userPer, userIdx) => {
-      dataPoint[`user${userIdx + 1}`] = userPer[i];
+    selectedUsers.forEach((userIdx) => {
+      if (per[userIdx] && per[userIdx][i] !== undefined) {
+        dataPoint[`user${userIdx + 1}`] = per[userIdx][i];
+      }
     });
     return dataPoint;
   });
@@ -39,22 +42,25 @@ const PERChartCard = ({ per, time }: PERChartCardProps) => {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
-              <YAxis 
+              <XAxis
+                dataKey="time"
+                label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }}
+              />
+              <YAxis
                 label={{ value: "PER", angle: -90, position: "insideLeft" }}
                 domain={[0, 1]}
               />
               <Tooltip formatter={(value) => `${(Number(value) * 100).toFixed(2)}%`} />
               <Legend />
-              {per.map((_, idx) => (
+              {selectedUsers.map((userIdx, idx) => (
                 <Line
-                  key={`per-${idx}`}
+                  key={`per-${userIdx}`}
                   type="monotone"
-                  dataKey={`user${idx + 1}`}
-                  stroke={COLORS[idx]}
+                  dataKey={`user${userIdx + 1}`}
+                  stroke={COLORS[idx % COLORS.length]}
                   strokeWidth={2}
                   dot={false}
-                  name={`User ${idx + 1} PER`}
+                  name={`User ${userIdx + 1} PER`}
                 />
               ))}
             </LineChart>

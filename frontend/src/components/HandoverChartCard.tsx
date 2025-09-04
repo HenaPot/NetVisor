@@ -15,22 +15,29 @@ interface HandoverChartCardProps {
   handover?: number[][];
   time?: number[];
   numberOfAPs?: number; 
+  selectedUsers: number[];
 }
 
-const HandoverChartCard = ({ handover, time, numberOfAPs = 3 }: HandoverChartCardProps) => {
+const HandoverChartCard = ({
+  handover,
+  time,
+  numberOfAPs = 3,
+  selectedUsers,
+}: HandoverChartCardProps) => {
   if (!handover || !time) {
     return null;
   }
 
   const chartData = time.map((t, i) => {
     const dataPoint: any = { time: t };
-    handover.forEach((userHandover, userIdx) => {
-      dataPoint[`user${userIdx + 1}`] = userHandover[i];
+    selectedUsers.forEach((userIdx) => {
+      if (handover[userIdx] && handover[userIdx][i] !== undefined) {
+        dataPoint[`user${userIdx + 1}`] = handover[userIdx][i];
+      }
     });
     return dataPoint;
   });
 
-  // Generate Y-axis ticks based on number of APs
   const yAxisTicks = Array.from({ length: numberOfAPs }, (_, i) => i + 1);
 
   return (
@@ -43,24 +50,27 @@ const HandoverChartCard = ({ handover, time, numberOfAPs = 3 }: HandoverChartCar
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
-              <YAxis 
+              <XAxis
+                dataKey="time"
+                label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }}
+              />
+              <YAxis
                 label={{ value: "AP ID", angle: -90, position: "insideLeft" }}
-                domain={[0.5, numberOfAPs + 0.5]} // Adjust domain based on number of APs
-                ticks={yAxisTicks} // Use dynamically generated ticks
+                domain={[0.5, numberOfAPs + 0.5]}
+                ticks={yAxisTicks}
               />
               <Tooltip />
               <Legend />
-              {handover.map((_, idx) => (
+              {selectedUsers.map((userIdx, idx) => (
                 <Line
-                  key={`handover-${idx}`}
+                  key={`handover-${userIdx}`}
                   type="stepAfter"
-                  dataKey={`user${idx + 1}`}
-                  stroke={COLORS[idx]}
+                  dataKey={`user${userIdx + 1}`}
+                  stroke={COLORS[idx % COLORS.length]}
                   strokeWidth={2}
-                  dot={{ fill: COLORS[idx], r: 4 }}
+                  dot={{ fill: COLORS[idx % COLORS.length], r: 4 }}
                   activeDot={{ r: 6 }}
-                  name={`User ${idx + 1} AP`}
+                  name={`User ${userIdx + 1} AP`}
                 />
               ))}
             </LineChart>

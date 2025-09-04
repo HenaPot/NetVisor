@@ -16,20 +16,23 @@ interface CollisionChartCardProps {
   collision?: number[][];
   retries?: number[][];
   time?: number[];
+  selectedUsers: number[];
 }
 
-const CollisionChartCard = ({ collision, retries, time }: CollisionChartCardProps) => {
+const CollisionChartCard = ({ collision, retries, time, selectedUsers }: CollisionChartCardProps) => {
   if (!collision || !retries || !time) {
     return null;
   }
 
   const chartData = time.map((t, i) => {
     const dataPoint: any = { time: t };
-    collision.forEach((userCollision, userIdx) => {
-      dataPoint[`user${userIdx + 1}_collision`] = userCollision[i];
-    });
-    retries.forEach((userRetries, userIdx) => {
-      dataPoint[`user${userIdx + 1}_retries`] = userRetries[i];
+    selectedUsers.forEach((userIdx) => {
+      if (collision[userIdx] && collision[userIdx][i] !== undefined) {
+        dataPoint[`user${userIdx + 1}_collision`] = collision[userIdx][i];
+      }
+      if (retries[userIdx] && retries[userIdx][i] !== undefined) {
+        dataPoint[`user${userIdx + 1}_retries`] = retries[userIdx][i];
+      }
     });
     return dataPoint;
   });
@@ -44,12 +47,15 @@ const CollisionChartCard = ({ collision, retries, time }: CollisionChartCardProp
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
-              <YAxis 
-                label={{ value: "Count", angle: -90, position: "insideLeft" }}
+              <XAxis
+                dataKey="time"
+                label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }}
+              />
+              <YAxis
+                label={{ value: "Retries", angle: -90, position: "insideLeft" }}
                 yAxisId="left"
               />
-              <YAxis 
+              <YAxis
                 orientation="right"
                 yAxisId="right"
                 label={{ value: "Collision", angle: -90, position: "insideRight" }}
@@ -57,26 +63,26 @@ const CollisionChartCard = ({ collision, retries, time }: CollisionChartCardProp
               />
               <Tooltip />
               <Legend />
-              {collision.map((_, idx) => (
+              {selectedUsers.map((userIdx, idx) => (
                 <Bar
-                  key={`collision-${idx}`}
+                  key={`collision-${userIdx}`}
                   yAxisId="right"
-                  dataKey={`user${idx + 1}_collision`}
-                  fill={COLORS[idx]}
-                  name={`User ${idx + 1} Collision`}
+                  dataKey={`user${userIdx + 1}_collision`}
+                  fill={COLORS[idx % COLORS.length]}
+                  name={`User ${userIdx + 1} Collision`}
                   barSize={10}
                 />
               ))}
-              {retries.map((_, idx) => (
+              {selectedUsers.map((userIdx, idx) => (
                 <Line
-                  key={`retries-${idx}`}
+                  key={`retries-${userIdx}`}
                   yAxisId="left"
                   type="monotone"
-                  dataKey={`user${idx + 1}_retries`}
-                  stroke={COLORS[idx]}
+                  dataKey={`user${userIdx + 1}_retries`}
+                  stroke={COLORS[idx % COLORS.length]}
                   strokeWidth={2}
                   dot={false}
-                  name={`User ${idx + 1} Retries`}
+                  name={`User ${userIdx + 1} Retries`}
                 />
               ))}
             </ComposedChart>

@@ -1,9 +1,11 @@
 // pages/WirelessSimDashboard.tsx
-import { Box, CircularProgress, Typography, Grid, IconButton, Alert, Button } from "@mui/material";
+import { 
+  Box, CircularProgress, Typography, Grid, IconButton, 
+  FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, OutlinedInput 
+} from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef} from "react";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import EnvironmentSidebar from "../components/EnvironmentSidebar";
 import SINRChartCard from "../components/SINRChartCard";
 import ThroughputChartCard from "../components/ThroughputChartCard";
@@ -24,6 +26,17 @@ interface SimulationResult {
   error?: string;
 }
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 6.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
 const WirelessSimDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,46 +45,43 @@ const WirelessSimDashboard = () => {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [simulationId, setSimulationId] = useState(incomingSimulationId || "");
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [selectedAPs, setSelectedAPs] = useState<number[]>([]);
   const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
   
-  // Use refs to track if we've already made the API call
   const hasFetchedRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Generate a unique ID for this simulation
   const generateSimulationId = () => {
     return `sim-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  // Get the most recent historical result to check if we're viewing the current simulation
-  const getMostRecentHistoryItem = () => {
-    const savedHistory = localStorage.getItem("simulationHistory");
-    if (savedHistory) {
-      try {
-        const history = JSON.parse(savedHistory);
-        return history.length > 0 ? history[0] : null;
-      } catch (error) {
-        console.error("Error parsing simulation history:", error);
+  useEffect(() => {
+    if (result && formData) {
+      const numUsers = result.users_throughput?.length || formData.numberOfUsers || 0;
+      const numAPs = formData.numberOfAccessPoints || 0;
+
+      if (selectedUsers.length === 0) {
+        setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
+      }
+      if (selectedAPs.length === 0) {
+        setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
       }
     }
-    return null;
-  };
+  }, [result, formData]);
+
 
   useEffect(() => {
     if (!formData) {
       navigate("/");
       return;
     }
-    
-    // Generate a new simulation ID if we don't have one
     if (!simulationId) {
       setSimulationId(generateSimulationId());
     }
-    // Reset the fetch flag when formData changes
     hasFetchedRef.current = false;
     
     return () => {
-      // Cleanup: abort any ongoing fetch request
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -83,7 +93,6 @@ const WirelessSimDashboard = () => {
       return;
     }
     
-    // If we have a saved result and it's marked as historical, use it immediately
     if (savedResult && isHistorical) {
       setResult(savedResult);
       setLoading(false);
@@ -91,7 +100,6 @@ const WirelessSimDashboard = () => {
       return;
     }
     
-    // If we have a saved result but it's NOT historical (current simulation), use it but don't show historical alert
     if (savedResult && !isHistorical) {
       setResult(savedResult);
       setLoading(false);
@@ -99,47 +107,37 @@ const WirelessSimDashboard = () => {
       return;
     }
     
-    // Otherwise, fetch from the backend (new simulation)
     setLoading(true);
     hasFetchedRef.current = true;
     
-    // Create abort controller for cleanup
     abortControllerRef.current = new AbortController();
     
     fetch(`${API_URL}/api/simulation`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
       signal: abortControllerRef.current.signal,
     })
       .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.json();
       })
-      .then((data) => {
-        setResult(data);
-      })
+      .then((data) => setResult(data))
       .catch((error) => {
-        if (error.name === 'AbortError') {
-          console.log('Fetch aborted');
-          return;
+        if (error.name !== "AbortError") {
+          setResult({ 
+            error: error.message,
+            time: [],
+            users_collision: [],
+            users_distance: [],
+            users_handover: [],
+            users_mac_throughput: [],
+            users_per: [],
+            users_retries: [],
+            users_sinr: [],
+            users_throughput: []
+          });
         }
-        setResult({ 
-          error: error.message,
-          time: [],
-          users_collision: [],
-          users_distance: [],
-          users_handover: [],
-          users_mac_throughput: [],
-          users_per: [],
-          users_retries: [],
-          users_sinr: [],
-          users_throughput: []
-        });
       })
       .finally(() => setLoading(false));
   }, [formData, savedResult, isHistorical, navigate, API_URL]);
@@ -156,38 +154,40 @@ const WirelessSimDashboard = () => {
     });
   };
 
-  const handleViewCurrent = () => {
-    const mostRecent = getMostRecentHistoryItem();
-    if (mostRecent) {
-      navigate("/dashboard", { 
-        state: { 
-          formData: mostRecent.formData, 
-          savedResult: mostRecent.result,
-          isHistorical: false, // Mark as current, not historical
-          simulationId: mostRecent.id // Use the same ID as history
-        },
-        replace: true
-      });
-    }
-  };
-
-  // Add helper function to get most recent history ID
-  const getMostRecentHistoryId = () => {
-    const savedHistory = localStorage.getItem("simulationHistory");
-    if (savedHistory) {
-      try {
-        const history = JSON.parse(savedHistory);
-        return history.length > 0 ? history[0].id : null;
-      } catch (error) {
-        console.error("Error parsing simulation history:", error);
-      }
-    }
-    return null;
-  };
 
   if (!formData) return null;
 
-  const showHistoricalAlert = savedResult && isHistorical && simulationId !== getMostRecentHistoryId();
+  const numUsers = result?.users_throughput?.length || formData.numberOfUsers || 0;
+  const numAPs = formData?.numberOfAccessPoints || 0;
+
+  const userOptions = ["All", ...Array.from({ length: numUsers }, (_, i) => `User ${i + 1}`)];
+  const apOptions = ["All", ...Array.from({ length: numAPs }, (_, i) => `AP ${i + 1}`)];
+
+  const handleUsersChange = (event: any) => {
+    const value = event.target.value as string[];
+    if (value.includes("All")) {
+      if (selectedUsers.length === numUsers) {
+        setSelectedUsers([]);
+      } else {
+        setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
+      }
+    } else {
+      setSelectedUsers(value.map(v => parseInt(v.split(" ")[1]) - 1));
+    }
+  };
+
+  const handleAPsChange = (event: any) => {
+    const value = event.target.value as string[];
+    if (value.includes("All")) {
+      if (selectedAPs.length === numAPs) {
+        setSelectedAPs([]); 
+      } else {
+        setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
+      }
+    } else {
+      setSelectedAPs(value.map(v => parseInt(v.split(" ")[1]) - 1));
+    }
+  };
 
   return (
     <>
@@ -201,15 +201,10 @@ const WirelessSimDashboard = () => {
       <IconButton 
         onClick={() => navigate(-1)} 
         sx={{
-          position: "fixed",
-          top: 16,
-          right: 16,
+          position: "fixed", top: 16, right: 16,
           zIndex: (theme) => theme.zIndex.drawer + 2,
-          backgroundColor: "background.paper",
-          boxShadow: 2,
-          "&:hover": {
-            backgroundColor: "action.hover",
-          },
+          backgroundColor: "background.paper", boxShadow: 2,
+          "&:hover": { backgroundColor: "action.hover" },
         }}
         aria-label="go back"
       >
@@ -222,30 +217,57 @@ const WirelessSimDashboard = () => {
           display: "flex",
           flexDirection: "column",
           backgroundColor: "background.default",
-          px: 2,
-          py: 4,
-          pt: 8,
+          px: 2, py: 4, pt: 8,
         }}
       >
-        {/* Show alert for historical results with option to view current */}
-        {showHistoricalAlert && (
-          <Alert 
-            severity="info" 
-            sx={{ mb: 2 }}
-            action={
-              <Button 
-                color="inherit" 
-                size="small" 
-                endIcon={<RefreshIcon />}
-                onClick={handleViewCurrent}
-              >
-                View Current
-              </Button>
-            }
-          >
-            Viewing saved simulation results from history
-          </Alert>
-        )}
+
+        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Select Users</InputLabel>
+            <Select
+              multiple
+              value={selectedUsers.length === numUsers ? ["All"] : selectedUsers.map(u => `User ${u + 1}`)}
+              onChange={handleUsersChange}
+              input={<OutlinedInput label="Select Users" />}
+              renderValue={(selected) => selected.join(", ")}
+              MenuProps={MenuProps}
+            >
+              {userOptions.map((name) => (
+                <MenuItem key={name} value={name}>
+                  <Checkbox 
+                    checked={name === "All" 
+                      ? selectedUsers.length === numUsers 
+                      : selectedUsers.includes(parseInt(name.split(" ")[1]) - 1)} 
+                  />
+                  <ListItemText primary={name} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel>Select APs</InputLabel>
+            <Select
+              multiple
+              value={selectedAPs.length === numAPs ? ["All"] : selectedAPs.map(a => `AP ${a + 1}`)}
+              onChange={handleAPsChange}
+              input={<OutlinedInput label="Select APs" />}
+              renderValue={(selected) => selected.join(", ")}
+              MenuProps={MenuProps}
+            >
+              {apOptions.map((name) => (
+                <MenuItem key={name} value={name}>
+                  <Checkbox 
+                    checked={name === "All" 
+                      ? selectedAPs.length === numAPs 
+                      : selectedAPs.includes(parseInt(name.split(" ")[1]) - 1)} 
+                  />
+                  <ListItemText primary={name} />
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         
         <Box sx={{ width: "100%", maxWidth: "100%", mx: "auto" }}>
           {loading ? (
@@ -260,20 +282,32 @@ const WirelessSimDashboard = () => {
                   sinr={result.users_sinr} 
                   distance={result.users_distance} 
                   time={result.time} 
-                  error={result.error} 
+                  error={result.error}
+                  selectedUsers={selectedUsers}
+                  selectedAPs={selectedAPs}
                 />
               </Grid>
               <Grid item xs={12} {...({} as any)}>
                 <ThroughputChartCard 
                   throughput={result.users_throughput} 
                   macThroughput={result.users_mac_throughput}
-                  time={result.time} 
+                  time={result.time}
+                  selectedUsers={selectedUsers}
                 />
               </Grid>
               <Grid item xs={12} {...({} as any)}>
                 <PERChartCard 
                   per={result.users_per} 
-                  time={result.time} 
+                  time={result.time}
+                  selectedUsers={selectedUsers}
+                />
+              </Grid>
+              <Grid item xs={12} {...({} as any)}>
+                <CollisionChartCard 
+                  collision={result.users_collision} 
+                  retries={result.users_retries}
+                  time={result.time}
+                  selectedUsers={selectedUsers}
                 />
               </Grid>
               <Grid item xs={12} {...({} as any)}>
@@ -281,13 +315,7 @@ const WirelessSimDashboard = () => {
                   handover={result.users_handover} 
                   time={result.time} 
                   numberOfAPs={formData.numberOfAccessPoints}
-                />
-              </Grid>
-              <Grid item xs={12} {...({} as any)}>
-                <CollisionChartCard 
-                  collision={result.users_collision} 
-                  retries={result.users_retries}
-                  time={result.time} 
+                  selectedUsers={selectedUsers}
                 />
               </Grid>
             </Grid>
