@@ -295,7 +295,7 @@ const EnvironmentSidebar = ({
                             Parameters:
                           </Typography>
                           <List dense>
-                            {Object.entries(item.formData).slice(0, 3).map(([key, value]) => (
+                            {Object.entries(item.formData).map(([key, value]) => (
                               <ListItem key={key} sx={{ py: 0 }}>
                                 <ListItemText
                                   primary={key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
@@ -309,11 +309,6 @@ const EnvironmentSidebar = ({
                                 />
                               </ListItem>
                             ))}
-                            {Object.keys(item.formData).length > 3 && (
-                              <Typography variant="caption" color="textSecondary">
-                                ...and {Object.keys(item.formData).length - 3} more parameters
-                              </Typography>
-                            )}
                           </List>
                         </Box>
                       </Collapse>

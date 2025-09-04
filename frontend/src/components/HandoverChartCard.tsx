@@ -43,7 +43,7 @@ const HandoverChartCard = ({ handover, time, numberOfAPs = 3 }: HandoverChartCar
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", position: "insideBottomRight" }} />
+              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
               <YAxis 
                 label={{ value: "AP ID", angle: -90, position: "insideLeft" }}
                 domain={[0.5, numberOfAPs + 0.5]} // Adjust domain based on number of APs

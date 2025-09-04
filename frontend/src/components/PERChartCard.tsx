@@ -39,7 +39,7 @@ const PERChartCard = ({ per, time }: PERChartCardProps) => {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", position: "insideBottomRight" }} />
+              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
               <YAxis 
                 label={{ value: "PER", angle: -90, position: "insideLeft" }}
                 domain={[0, 1]}

@@ -44,7 +44,7 @@ const CollisionChartCard = ({ collision, retries, time }: CollisionChartCardProp
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="time" label={{ value: "Time (s)", position: "insideBottomRight" }} />
+              <XAxis dataKey="time" label={{ value: "Time (s)", dy: 20, position: "insideBottomRight" }} />
               <YAxis 
                 label={{ value: "Count", angle: -90, position: "insideLeft" }}
                 yAxisId="left"

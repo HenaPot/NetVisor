@@ -95,6 +95,7 @@ const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
                     dataKey="time"
                     label={{
                       value: "Time (s)",
+                      dy: 20,
                       position: "insideBottomRight",
                     }}
                   />
@@ -134,6 +135,7 @@ const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
                     dataKey="time"
                     label={{
                       value: "Time (s)",
+                      dy: 20,
                       position: "insideBottomRight",
                     }}
                   />
