@@ -1,7 +1,8 @@
 // pages/WirelessSimDashboard.tsx
 import { 
   Box, CircularProgress, Typography, Grid, IconButton, 
-  FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, OutlinedInput 
+  FormControl, InputLabel, Select, MenuItem, Checkbox, 
+  ListItemText, OutlinedInput, Button 
 } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef} from "react";
@@ -57,19 +58,14 @@ const WirelessSimDashboard = () => {
   };
 
   useEffect(() => {
-    if (result && formData) {
-      const numUsers = result.users_throughput?.length || formData.numberOfUsers || 0;
-      const numAPs = formData.numberOfAccessPoints || 0;
+    if (!result || !formData) return;
 
-      if (selectedUsers.length === 0) {
-        setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
-      }
-      if (selectedAPs.length === 0) {
-        setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
-      }
-    }
+    const numUsers = result.users_throughput?.length || formData.numberOfUsers || 0;
+    const numAPs = formData.numberOfAccessPoints || 0;
+
+    setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
+    setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
   }, [result, formData]);
-
 
   useEffect(() => {
     if (!formData) {
@@ -93,14 +89,7 @@ const WirelessSimDashboard = () => {
       return;
     }
     
-    if (savedResult && isHistorical) {
-      setResult(savedResult);
-      setLoading(false);
-      hasFetchedRef.current = true;
-      return;
-    }
-    
-    if (savedResult && !isHistorical) {
+    if (savedResult) {
       setResult(savedResult);
       setLoading(false);
       hasFetchedRef.current = true;
@@ -154,39 +143,40 @@ const WirelessSimDashboard = () => {
     });
   };
 
-
   if (!formData) return null;
 
   const numUsers = result?.users_throughput?.length || formData.numberOfUsers || 0;
   const numAPs = formData?.numberOfAccessPoints || 0;
 
-  const userOptions = ["All", ...Array.from({ length: numUsers }, (_, i) => `User ${i + 1}`)];
-  const apOptions = ["All", ...Array.from({ length: numAPs }, (_, i) => `AP ${i + 1}`)];
+  const userOptions = Array.from({ length: numUsers }, (_, i) => `User ${i + 1}`);
+  const apOptions = Array.from({ length: numAPs }, (_, i) => `AP ${i + 1}`);
 
   const handleUsersChange = (event: any) => {
     const value = event.target.value as string[];
-    if (value.includes("All")) {
-      if (selectedUsers.length === numUsers) {
-        setSelectedUsers([]);
-      } else {
-        setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
-      }
-    } else {
-      setSelectedUsers(value.map(v => parseInt(v.split(" ")[1]) - 1));
-    }
+    const newSelection = value.map(v => parseInt(v.split(" ")[1], 10) - 1);
+    setSelectedUsers(newSelection);
   };
 
   const handleAPsChange = (event: any) => {
     const value = event.target.value as string[];
-    if (value.includes("All")) {
-      if (selectedAPs.length === numAPs) {
-        setSelectedAPs([]); 
-      } else {
-        setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
-      }
-    } else {
-      setSelectedAPs(value.map(v => parseInt(v.split(" ")[1]) - 1));
-    }
+    const newSelection = value.map(v => parseInt(v.split(" ")[1], 10) - 1);
+    setSelectedAPs(newSelection);
+  };
+
+  const selectAllUsers = () => {
+    setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
+  };
+
+  const deselectAllUsers = () => {
+    setSelectedUsers([]);
+  };
+
+  const selectAllAPs = () => {
+    setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
+  };
+
+  const deselectAllAPs = () => {
+    setSelectedAPs([]);
   };
 
   return (
@@ -220,53 +210,64 @@ const WirelessSimDashboard = () => {
           px: 2, py: 4, pt: 8,
         }}
       >
+        <Box sx={{ display: "flex", gap: 2, mb: 3, alignItems: 'flex-end' }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button variant="outlined" size="small" onClick={selectAllUsers}>
+                Select All Users
+              </Button>
+              <Button variant="outlined" size="small" onClick={deselectAllUsers}>
+                Deselect All
+              </Button>
+            </Box>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Select Users</InputLabel>
+              <Select
+                multiple
+                value={selectedUsers.map(u => `User ${u + 1}`)}
+                onChange={handleUsersChange}
+                input={<OutlinedInput label="Select Users" />}
+                renderValue={(selected) => selected.join(", ")}
+                MenuProps={MenuProps}
+              >
+                {userOptions.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    <Checkbox checked={selectedUsers.includes(parseInt(name.split(" ")[1], 10) - 1)} />
+                    <ListItemText primary={name} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
-        <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Select Users</InputLabel>
-            <Select
-              multiple
-              value={selectedUsers.length === numUsers ? ["All"] : selectedUsers.map(u => `User ${u + 1}`)}
-              onChange={handleUsersChange}
-              input={<OutlinedInput label="Select Users" />}
-              renderValue={(selected) => selected.join(", ")}
-              MenuProps={MenuProps}
-            >
-              {userOptions.map((name) => (
-                <MenuItem key={name} value={name}>
-                  <Checkbox 
-                    checked={name === "All" 
-                      ? selectedUsers.length === numUsers 
-                      : selectedUsers.includes(parseInt(name.split(" ")[1]) - 1)} 
-                  />
-                  <ListItemText primary={name} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Select APs</InputLabel>
-            <Select
-              multiple
-              value={selectedAPs.length === numAPs ? ["All"] : selectedAPs.map(a => `AP ${a + 1}`)}
-              onChange={handleAPsChange}
-              input={<OutlinedInput label="Select APs" />}
-              renderValue={(selected) => selected.join(", ")}
-              MenuProps={MenuProps}
-            >
-              {apOptions.map((name) => (
-                <MenuItem key={name} value={name}>
-                  <Checkbox 
-                    checked={name === "All" 
-                      ? selectedAPs.length === numAPs 
-                      : selectedAPs.includes(parseInt(name.split(" ")[1]) - 1)} 
-                  />
-                  <ListItemText primary={name} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              <Button variant="outlined" size="small" onClick={selectAllAPs}>
+                Select All APs
+              </Button>
+              <Button variant="outlined" size="small" onClick={deselectAllAPs}>
+                Deselect All
+              </Button>
+            </Box>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Select APs</InputLabel>
+              <Select
+                multiple
+                value={selectedAPs.map(a => `AP ${a + 1}`)}
+                onChange={handleAPsChange}
+                input={<OutlinedInput label="Select APs" />}
+                renderValue={(selected) => selected.join(", ")}
+                MenuProps={MenuProps}
+              >
+                {apOptions.map((name) => (
+                  <MenuItem key={name} value={name}>
+                    <Checkbox checked={selectedAPs.includes(parseInt(name.split(" ")[1], 10) - 1)} />
+                    <ListItemText primary={name} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
         
         <Box sx={{ width: "100%", maxWidth: "100%", mx: "auto" }}>
