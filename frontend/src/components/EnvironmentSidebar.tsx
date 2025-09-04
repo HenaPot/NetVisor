@@ -15,6 +15,11 @@ import {
   Tab,
   Alert,
   Collapse,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
@@ -24,6 +29,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 
 import DashboardControls from "./DashboardControls"; // make sure path is correct
 
@@ -68,6 +74,8 @@ const EnvironmentSidebar = ({
   const [expandedSections, setExpandedSections] = useState<{
     [key: string]: boolean;
   }>({});
+  const [exportFormat, setExportFormat] = useState("json");
+  const [exportFileName, setExportFileName] = useState("");
 
   const iOS =
     typeof navigator !== "undefined" &&
@@ -128,6 +136,14 @@ const EnvironmentSidebar = ({
     }
   }, [formData, currentResult, currentSimulationId, open]);
 
+  useEffect(() => {
+    // Set default export file name when currentResult changes
+    if (currentResult && !exportFileName) {
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      setExportFileName(`simulation_results_${timestamp}`);
+    }
+  }, [currentResult, exportFileName]);
+
   const generateSummary = (result: any): string => {
     if (!result || result.error) return "Error in simulation";
 
@@ -160,6 +176,78 @@ const EnvironmentSidebar = ({
 
   const formatTimestamp = (timestamp: number): string => {
     return new Date(timestamp).toLocaleString();
+  };
+
+  const handleExport = () => {
+    if (!currentResult) return;
+
+    const exportData = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        simulationId: currentSimulationId,
+        exportFormat,
+        parameters: formData,
+      },
+      results: currentResult
+    };
+
+    let data: string;
+    let mimeType: string;
+    let fileExtension: string;
+
+    switch (exportFormat) {
+      case "json":
+        data = JSON.stringify(exportData, null, 2);
+        mimeType = "application/json";
+        fileExtension = "json";
+        break;
+      case "csv":
+        // Simple CSV conversion for main metrics
+        data = convertToCSV(exportData);
+        mimeType = "text/csv";
+        fileExtension = "csv";
+        break;
+      default:
+        return;
+    }
+
+    const blob = new Blob([data], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${exportFileName}.${fileExtension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const convertToCSV = (data: any): string => {
+    // Simple CSV conversion focusing on main metrics
+    const lines = [];
+    
+    // Add metadata
+    lines.push("METADATA");
+    lines.push(`Export Date,${data.metadata.exportDate}`);
+    lines.push(`Simulation ID,${data.metadata.simulationId}`);
+    lines.push("");
+    
+    // Add parameters
+    lines.push("PARAMETERS");
+    Object.entries(data.metadata.parameters).forEach(([key, value]) => {
+      lines.push(`${key},${Array.isArray(value) ? value.join(';') : value}`);
+    });
+    lines.push("");
+    
+    // Add results summary
+    lines.push("RESULTS SUMMARY");
+    const result = data.results;
+    lines.push(`Time Steps,${result.time?.length || 0}`);
+    lines.push(`Users,${result.users_throughput?.length || 0}`);
+    lines.push(`Access Points,${formData.numberOfAccessPoints || 0}`);
+    lines.push("");
+    
+    return lines.join("\n");
   };
 
   return (
@@ -237,6 +325,7 @@ const EnvironmentSidebar = ({
               <Tab icon={<SettingsIcon />} label="Current" />
               <Tab icon={<HistoryIcon />} label="History" />
               <Tab icon={<FilterListIcon />} label="Filter" />
+              <Tab icon={<FileDownloadIcon />} label="Export" />
             </Tabs>
           </Box>
 
@@ -374,7 +463,7 @@ const EnvironmentSidebar = ({
                   </List>
                 )}
               </Box>
-            ) : (
+            ) : activeTab === 2 ? (
               // Filter
               <Box sx={{ p: 2 }}>
                 <Typography variant="subtitle1" gutterBottom>
@@ -388,6 +477,55 @@ const EnvironmentSidebar = ({
                   onUsersChange={onUsersChange}
                   onAPsChange={onAPsChange}
                 />
+              </Box>
+            ) : (
+              // Export
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Export Results
+                </Typography>
+                
+                {!currentResult ? (
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    No simulation results available for export.
+                  </Alert>
+                ) : (
+                  <>
+                    <FormControl fullWidth sx={{ mb: 2 }}>
+                      <InputLabel>Format</InputLabel>
+                      <Select
+                        value={exportFormat}
+                        onChange={(e) => setExportFormat(e.target.value)}
+                        label="Format"
+                      >
+                        <MenuItem value="json">JSON</MenuItem>
+                        <MenuItem value="csv">CSV (Summary)</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <TextField
+                      fullWidth
+                      label="File Name"
+                      value={exportFileName}
+                      onChange={(e) => setExportFileName(e.target.value)}
+                      sx={{ mb: 2 }}
+                    />
+
+                    <Button
+                      variant="contained"
+                      startIcon={<FileDownloadIcon />}
+                      onClick={handleExport}
+                      fullWidth
+                    >
+                      Export Results
+                    </Button>
+
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      Exports include simulation parameters and all result data.
+                      {exportFormat === "csv" && " CSV format provides a summary of the results."}
+                    </Alert>
+                  </>
+                )}
               </Box>
             )}
           </Box>
