@@ -321,6 +321,9 @@ const EnvironmentSidebar = ({
               value={activeTab}
               onChange={(_, newValue) => setActiveTab(newValue)}
               sx={{ mt: 1 }}
+              scrollButtons="auto"
+              variant="scrollable"
+              allowScrollButtonsMobile
             >
               <Tab icon={<SettingsIcon />} label="Current" />
               <Tab icon={<HistoryIcon />} label="History" />
