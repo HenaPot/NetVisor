@@ -17,43 +17,56 @@ interface SINRChartCardProps {
   distance?: number[][][];
   time?: number[];
   error?: string;
+  selectedUsers: number[];
+  selectedAPs: number[];
 }
 
 function transformSINRdata(
   sinr: number[][][],
   distance: number[][][],
-  time: number[]
+  time: number[],
+  selectedUsers: number[],
+  selectedAPs: number[]
 ) {
-  const numUsers = sinr.length;
-  const numAPs = sinr[0].length;
   const numTimes = time.length;
+  const chartData: Record<string, number>[] = [];
 
-  const chartData = [];
+  for (let t = 0; t < numTimes; t++) {
+    const dataPoint: Record<string, number> = { time: time[t] };
 
-  for (let i = 0; i < numTimes; i++) {
-    const dataPoint: Record<string, number> = { time: time[i] };
-    
-    for (let userIdx = 0; userIdx < numUsers; userIdx++) {
-      // Find the best SINR across all APs for this user at this time
+    selectedUsers.forEach((userIdx) => {
       let bestSinr = -Infinity;
       let bestDistance = 0;
-      
-      for (let apIdx = 0; apIdx < numAPs; apIdx++) {
-        if (sinr[userIdx][apIdx][i] > bestSinr) {
-          bestSinr = sinr[userIdx][apIdx][i];
-          bestDistance = distance[userIdx][apIdx][i];
+
+      // Only consider selected APs for this user
+      selectedAPs.forEach((apIdx) => {
+        const value = sinr[userIdx]?.[apIdx]?.[t];
+        if (value !== undefined && value > bestSinr) {
+          bestSinr = value;
+          bestDistance = distance[userIdx]?.[apIdx]?.[t] ?? 0;
         }
+      });
+
+      if (bestSinr !== -Infinity) {
+        dataPoint[`sinr_user${userIdx + 1}`] = bestSinr;
+        dataPoint[`distance_user${userIdx + 1}`] = bestDistance;
       }
-      
-      dataPoint[`sinr_user${userIdx + 1}`] = bestSinr;
-      dataPoint[`distance_user${userIdx + 1}`] = bestDistance;
-    }
+    });
+
     chartData.push(dataPoint);
   }
+
   return chartData;
 }
 
-const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
+const SINRChartCard = ({
+  sinr,
+  distance,
+  time,
+  error,
+  selectedUsers,
+  selectedAPs,
+}: SINRChartCardProps) => {
   if (error) {
     return (
       <Card sx={{ width: "100%", boxShadow: 3 }}>
@@ -73,14 +86,19 @@ const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
     return null;
   }
 
-  const timeChartData = transformSINRdata(sinr, distance, time);
-  const numUsers = sinr.length;
+  const timeChartData = transformSINRdata(
+    sinr,
+    distance,
+    time,
+    selectedUsers,
+    selectedAPs
+  );
 
   return (
     <Card sx={{ boxShadow: 3, width: "100%" }}>
       <CardContent sx={{ width: "100%" }}>
         <Typography variant="h5" align="center" gutterBottom>
-          Connectivity Analysis
+          NetVisor Connectivity Analysis
         </Typography>
         <Grid container spacing={3} sx={{ width: "100%", margin: 0 }}>
           <Grid item xs={12} md={6} sx={{ width: "100%" }} {...({} as any)}>
@@ -108,14 +126,14 @@ const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
                   />
                   <Tooltip />
                   <Legend />
-                  {Array.from({ length: numUsers }).map((_, idx) => (
+                  {selectedUsers.map((userIdx, i) => (
                     <Line
-                      key={`sinr_user${idx + 1}`}
+                      key={`sinr_user${userIdx + 1}`}
                       type="monotone"
-                      dataKey={`sinr_user${idx + 1}`}
-                      stroke={COLORS[idx % COLORS.length]}
+                      dataKey={`sinr_user${userIdx + 1}`}
+                      stroke={COLORS[i % COLORS.length]}
                       dot={false}
-                      name={`User ${idx + 1} SINR`}
+                      name={`User ${userIdx + 1} SINR`}
                     />
                   ))}
                 </LineChart>
@@ -148,14 +166,14 @@ const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
                   />
                   <Tooltip />
                   <Legend />
-                  {Array.from({ length: numUsers }).map((_, idx) => (
+                  {selectedUsers.map((userIdx, i) => (
                     <Line
-                      key={`distance_user${idx + 1}`}
+                      key={`distance_user${userIdx + 1}`}
                       type="monotone"
-                      dataKey={`distance_user${idx + 1}`}
-                      stroke={COLORS[idx % COLORS.length]}
+                      dataKey={`distance_user${userIdx + 1}`}
+                      stroke={COLORS[i % COLORS.length]}
                       dot={false}
-                      name={`User ${idx + 1} Distance`}
+                      name={`User ${userIdx + 1} Distance`}
                     />
                   ))}
                 </LineChart>
@@ -164,7 +182,8 @@ const SINRChartCard = ({ sinr, distance, time, error }: SINRChartCardProps) => {
           </Grid>
         </Grid>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-          SINR (Signal-to-Interference-plus-Noise Ratio) and distance to the best Access Point for each user.
+          SINR (Signal-to-Interference-plus-Noise Ratio) and distance to the
+          best Access Point for each selected user.
         </Typography>
       </CardContent>
     </Card>

@@ -20,9 +20,12 @@ import MenuIcon from "@mui/icons-material/Menu";
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryIcon from "@mui/icons-material/History";
 import SettingsIcon from "@mui/icons-material/Settings";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+
+import DashboardControls from "./DashboardControls"; // make sure path is correct
 
 interface SimulationHistoryItem {
   id: string;
@@ -36,6 +39,13 @@ interface EnvironmentSidebarProps {
   formData: Record<string, any>;
   currentResult?: any;
   currentSimulationId?: string;
+  numUsers: number;
+  numAPs: number;
+  selectedUsers: number[];
+  selectedAPs: number[];
+  onUsersChange: (event: any) => void;
+  onAPsChange: (event: any) => void;
+  onReset?: () => void;
   onHistoryItemClick?: (historyItem: SimulationHistoryItem) => void;
 }
 
@@ -43,6 +53,13 @@ const EnvironmentSidebar = ({
   formData,
   currentResult,
   currentSimulationId,
+  numUsers,
+  numAPs,
+  selectedUsers,
+  selectedAPs,
+  onUsersChange,
+  onAPsChange,
+  onReset,
   onHistoryItemClick,
 }: EnvironmentSidebarProps) => {
   const [open, setOpen] = useState(false);
@@ -52,13 +69,12 @@ const EnvironmentSidebar = ({
     [key: string]: boolean;
   }>({});
 
-  // iOS detection for swipeable drawer
-  const iOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const iOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  // Use a ref to track which simulations have been saved during this session
   const savedSimulationIdsRef = useRef<Set<string>>(new Set());
 
-  // Toggle sidebar
   const toggleSidebar = (newOpen: boolean) => () => {
     setOpen(newOpen);
   };
@@ -69,7 +85,6 @@ const EnvironmentSidebar = ({
       try {
         const parsedHistory = JSON.parse(savedHistory);
         setHistory(parsedHistory);
-        // Initialize the ref with existing IDs from localStorage
         parsedHistory.forEach((item: SimulationHistoryItem) => {
           savedSimulationIdsRef.current.add(item.id);
         });
@@ -80,17 +95,15 @@ const EnvironmentSidebar = ({
   }, []);
 
   useEffect(() => {
-    // Save current simulation to history if we have both formData and result
     if (formData && currentResult && currentSimulationId && !open) {
-      // Check if we've already saved this simulation during this session
       if (!savedSimulationIdsRef.current.has(currentSimulationId)) {
-        // Get current history from localStorage
         const savedHistory = localStorage.getItem("simulationHistory");
         const currentHistory = savedHistory ? JSON.parse(savedHistory) : [];
-        
-        // Check if this simulation is already in history using ID
-        const alreadyExists = currentHistory.some((item: SimulationHistoryItem) => item.id === currentSimulationId);
-        
+
+        const alreadyExists = currentHistory.some(
+          (item: SimulationHistoryItem) => item.id === currentSimulationId
+        );
+
         if (!alreadyExists) {
           const newHistoryItem: SimulationHistoryItem = {
             id: currentSimulationId,
@@ -100,14 +113,15 @@ const EnvironmentSidebar = ({
             summary: generateSummary(currentResult),
           };
 
-          // Add to history and keep only last 20 items
           const updatedHistory = [
             newHistoryItem,
-            ...currentHistory.filter((item: SimulationHistoryItem) => item.id !== currentSimulationId)
+            ...currentHistory.filter(
+              (item: SimulationHistoryItem) => item.id !== currentSimulationId
+            ),
           ].slice(0, 20);
 
           setHistory(updatedHistory);
-          savedSimulationIdsRef.current.add(currentSimulationId); // Mark as saved
+          savedSimulationIdsRef.current.add(currentSimulationId);
           localStorage.setItem("simulationHistory", JSON.stringify(updatedHistory));
         }
       }
@@ -116,25 +130,29 @@ const EnvironmentSidebar = ({
 
   const generateSummary = (result: any): string => {
     if (!result || result.error) return "Error in simulation";
-    
+
     const users = result.users_throughput?.length || 0;
     const timeSteps = result.time?.length || 0;
-    const avgThroughput = result.users_throughput 
-      ? (result.users_throughput.flat().reduce((sum: number, val: number) => sum + val, 0) / 
-         (result.users_throughput.flat().length || 1)).toFixed(2)
+    const avgThroughput = result.users_throughput
+      ? (
+          result.users_throughput.flat().reduce(
+            (sum: number, val: number) => sum + val,
+            0
+          ) / (result.users_throughput.flat().length || 1)
+        ).toFixed(2)
       : "0";
-    
+
     return `${users} users, ${timeSteps} steps, ${avgThroughput} avg throughput`;
   };
 
   const handleClearHistory = () => {
     setHistory([]);
-    savedSimulationIdsRef.current.clear(); // Clear the ref too
+    savedSimulationIdsRef.current.clear();
     localStorage.removeItem("simulationHistory");
   };
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
@@ -165,7 +183,7 @@ const EnvironmentSidebar = ({
           <MenuIcon />
         </IconButton>
       )}
-      
+
       <SwipeableDrawer
         anchor="left"
         open={open}
@@ -173,6 +191,9 @@ const EnvironmentSidebar = ({
         onOpen={toggleSidebar(true)}
         disableBackdropTransition={!iOS}
         disableDiscovery={iOS}
+        ModalProps={{
+          hideBackdrop: true,
+        }}
         sx={{
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
@@ -185,50 +206,67 @@ const EnvironmentSidebar = ({
           },
         }}
       >
-        <Box sx={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
+        <Box
+          sx={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           {/* Header */}
           <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
               <Typography variant="h6">Simulation Panel</Typography>
               <IconButton onClick={toggleSidebar(false)} size="small">
                 <CloseIcon />
               </IconButton>
             </Box>
-            
-            <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ mt: 1 }}>
+
+            <Tabs
+              value={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+              sx={{ mt: 1 }}
+            >
               <Tab icon={<SettingsIcon />} label="Current" />
               <Tab icon={<HistoryIcon />} label="History" />
+              <Tab icon={<FilterListIcon />} label="Filter" />
             </Tabs>
           </Box>
 
           {/* Content */}
           <Box sx={{ flex: 1, overflow: "auto" }}>
             {activeTab === 0 ? (
-              // Current Simulation Tab
+              // Current
               <Box sx={{ p: 2 }}>
                 <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                   <Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
                     Current Parameters
                   </Typography>
-                  <Chip 
-                    label="Live" 
-                    color="primary" 
-                    size="small" 
-                    variant="outlined" 
+                  <Chip
+                    label="Live"
+                    color="primary"
+                    size="small"
+                    variant="outlined"
                   />
                 </Box>
-                
                 <Divider sx={{ mb: 2 }} />
-                
+
                 <List dense>
                   {Object.entries(formData).map(([key, value]) => (
                     <ListItem key={key} sx={{ py: 0.5 }}>
                       <ListItemText
-                        primary={key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                        primary={key
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
                         secondary={
-                          Array.isArray(value)
-                            ? value.join(", ")
-                            : value?.toString()
+                          Array.isArray(value) ? value.join(", ") : value?.toString()
                         }
                         primaryTypographyProps={{ variant: "body2", fontWeight: "bold" }}
                         secondaryTypographyProps={{ variant: "body2" }}
@@ -237,10 +275,17 @@ const EnvironmentSidebar = ({
                   ))}
                 </List>
               </Box>
-            ) : (
-              // History Tab
+            ) : activeTab === 1 ? (
+              // History
               <Box sx={{ p: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: 2,
+                  }}
+                >
                   <Typography variant="subtitle1">Simulation History</Typography>
                   {history.length > 0 && (
                     <Button
@@ -262,20 +307,23 @@ const EnvironmentSidebar = ({
                   <List>
                     {history.map((item) => (
                       <Box key={item.id}>
-                        <ListItemButton 
+                        <ListItemButton
                           onClick={() => onHistoryItemClick?.(item)}
-                          sx={{ 
-                            border: 1, 
-                            borderColor: "divider", 
-                            borderRadius: 1, 
+                          sx={{
+                            border: 1,
+                            borderColor: "divider",
+                            borderRadius: 1,
                             mb: 1,
-                            "&:hover": { backgroundColor: "action.hover" }
+                            "&:hover": { backgroundColor: "action.hover" },
                           }}
                         >
                           <ListItemText
                             primary={formatTimestamp(item.timestamp)}
                             secondary={item.summary}
-                            primaryTypographyProps={{ variant: "body2", fontWeight: "bold" }}
+                            primaryTypographyProps={{
+                              variant: "body2",
+                              fontWeight: "bold",
+                            }}
                             secondaryTypographyProps={{ variant: "caption" }}
                           />
                           <IconButton
@@ -285,40 +333,85 @@ const EnvironmentSidebar = ({
                               toggleSection(item.id);
                             }}
                           >
-                            {expandedSections[item.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            {expandedSections[item.id] ? (
+                              <ExpandLessIcon />
+                            ) : (
+                              <ExpandMoreIcon />
+                            )}
                           </IconButton>
                         </ListItemButton>
-                        
-                      <Collapse in={expandedSections[item.id]}>
-                        <Box sx={{ pl: 2, pr: 2, pb: 1 }}>
-                          <Typography variant="caption" color="textSecondary">
-                            Parameters:
-                          </Typography>
-                          <List dense>
-                            {Object.entries(item.formData).map(([key, value]) => (
-                              <ListItem key={key} sx={{ py: 0 }}>
-                                <ListItemText
-                                  primary={key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                                  secondary={
-                                    Array.isArray(value)
-                                      ? value.join(", ")
-                                      : value?.toString()
-                                  }
-                                  primaryTypographyProps={{ variant: "caption", fontWeight: "bold" }}
-                                  secondaryTypographyProps={{ variant: "caption" }}
-                                />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </Box>
-                      </Collapse>
+
+                        <Collapse in={expandedSections[item.id]}>
+                          <Box sx={{ pl: 2, pr: 2, pb: 1 }}>
+                            <Typography variant="caption" color="textSecondary">
+                              Parameters:
+                            </Typography>
+                            <List dense>
+                              {Object.entries(item.formData).map(([key, value]) => (
+                                <ListItem key={key} sx={{ py: 0 }}>
+                                  <ListItemText
+                                    primary={key
+                                      .replace(/_/g, " ")
+                                      .replace(/\b\w/g, (l) => l.toUpperCase())}
+                                    secondary={
+                                      Array.isArray(value)
+                                        ? value.join(", ")
+                                        : value?.toString()
+                                    }
+                                    primaryTypographyProps={{
+                                      variant: "caption",
+                                      fontWeight: "bold",
+                                    }}
+                                    secondaryTypographyProps={{ variant: "caption" }}
+                                  />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </Box>
+                        </Collapse>
                       </Box>
                     ))}
                   </List>
                 )}
               </Box>
+            ) : (
+              // Filter
+              <Box sx={{ p: 2 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Filter Options
+                </Typography>
+                <DashboardControls
+                  numUsers={numUsers}
+                  numAPs={numAPs}
+                  selectedUsers={selectedUsers}
+                  selectedAPs={selectedAPs}
+                  onUsersChange={onUsersChange}
+                  onAPsChange={onAPsChange}
+                />
+              </Box>
             )}
           </Box>
+
+          {/* Footer Reset - only show on Filter tab */}
+          {activeTab === 2 && (
+            <Box
+              sx={{
+                p: 2,
+                borderTop: 1,
+                borderColor: "divider",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={onReset}
+              >
+                Reset Filters
+              </Button>
+            </Box>
+          )}
         </Box>
       </SwipeableDrawer>
     </>
