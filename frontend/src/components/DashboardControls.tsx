@@ -54,8 +54,8 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({
           onChange={onUsersChange}
           input={<OutlinedInput label="Select Users" />}
           renderValue={(selected) =>
-            selected.length > 2
-              ? `${selected.slice(0, 2).join(", ")}...`
+            selected.length > 6
+              ? `${selected.slice(0, 6).join(", ")}...`
               : selected.join(", ")
           }
           MenuProps={MenuProps}
@@ -79,8 +79,8 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({
           onChange={onAPsChange}
           input={<OutlinedInput label="Select APs" />}
           renderValue={(selected) =>
-            selected.length > 2
-              ? `${selected.slice(0, 2).join(", ")}...`
+            selected.length > 7
+              ? `${selected.slice(0, 7).join(", ")}...`
               : selected.join(", ")
           }
           MenuProps={MenuProps}

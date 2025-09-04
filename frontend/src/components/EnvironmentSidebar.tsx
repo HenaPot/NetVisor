@@ -192,7 +192,7 @@ const EnvironmentSidebar = ({
         disableBackdropTransition={!iOS}
         disableDiscovery={iOS}
         ModalProps={{
-          hideBackdrop: true, // <-- this removes the dark overlay completely
+          hideBackdrop: true,
         }}
         sx={{
           "& .MuiDrawer-paper": {

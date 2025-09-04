@@ -98,7 +98,7 @@ const SINRChartCard = ({
     <Card sx={{ boxShadow: 3, width: "100%" }}>
       <CardContent sx={{ width: "100%" }}>
         <Typography variant="h5" align="center" gutterBottom>
-          Connectivity Analysis
+          NetVisor Connectivity Analysis
         </Typography>
         <Grid container spacing={3} sx={{ width: "100%", margin: 0 }}>
           <Grid item xs={12} md={6} sx={{ width: "100%" }} {...({} as any)}>

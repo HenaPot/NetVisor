@@ -145,6 +145,15 @@ const WirelessSimDashboard = () => {
     });
   };
 
+  const handleResetFilters = () => {
+    const numUsers =
+      result?.users_throughput?.length || formData.numberOfUsers || 0;
+    const numAPs = formData.numberOfAccessPoints || 0;
+    
+    setSelectedUsers(Array.from({ length: numUsers }, (_, i) => i));
+    setSelectedAPs(Array.from({ length: numAPs }, (_, i) => i));
+  };
+
   if (!formData) return null;
 
   const numUsers =
@@ -187,6 +196,7 @@ const WirelessSimDashboard = () => {
         selectedAPs={selectedAPs}
         onUsersChange={handleUsersChange}
         onAPsChange={handleAPsChange}
+        onReset={handleResetFilters}
         onHistoryItemClick={handleHistoryItemClick}
       />
       <IconButton
